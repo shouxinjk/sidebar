@@ -1,5 +1,28 @@
-# Logs
-logs
+node_modules
+.DS_Store
+.github
+dist
+.npmrc
+.cache
+npminstall-debug.log*
+package-lock.json
+
+src/settings/iLifeSetting.ts
+
+tests/server/static
+tests/server/static/upload
+
+.local
+# local env files
+.env.local
+.env.*.local
+.eslintcache
+.env.production
+.env.development
+.env.test
+.env
+
+#logs
 *.log
 npm-debug.log*
 yarn-debug.log*
