@@ -213,7 +213,7 @@ export const solutionForm = {
                               miniprogram: {
                                 appid: "wx099102889bea2294",//小程序的appid
                                 title: props.data.rowItem.name, //小程序消息的title
-                                imgUrl:"https://ak-d.tripcdn.com/images/0105e120009mvqe7z9E35_C_800_600_R5.jpg_.webp?proc=autoorient",//小程序消息的封面图
+                                imgUrl:props.data.rowItem.logo,//小程序消息的封面图
                                 page:"/modules/solution/pages/detail/index.html?id="+props.data.rowItem.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
                               },
                             })
@@ -245,7 +245,342 @@ export const solutionForm = {
   }
 };
 
-//按时间倒序显示自动应答记录
+//笔记查询表单：带有搜索框，默认显示全部，搜索查询全部
+export const noteForm = {
+  "type": "page",
+  "name": "noteform",
+  "id": "noteform",
+  "title": "笔记列表",
+  "body": [
+    {
+      "type": "form",
+      "wrapWithPanel": false,
+      "className": "-m-4",
+      "data": { //数据通过page在搜索表单及数据列表间传递
+        "name":null
+      },
+      "body": [
+        {
+          "type": "flex",
+          "className": "p-1",
+          "items": [
+            {
+              "type": "container",
+              "label":"",
+              "body": [
+                {
+                  "type": "input-text",
+                  "className":"w-full",
+                  "placeholder": "关键字",
+                  "name": "name"
+                }
+              ],
+              "size": "xs",
+              "style": {
+                "position": "static",
+                "display": "block",
+                "flex": "1 1 auto",
+                "flexGrow": 1,
+                "flexBasis": "auto"
+              },
+              "wrapperBody": false,
+              "isFixedHeight": false,
+              "isFixedWidth": false
+            },
+            {
+              "type": "container",
+              "body": [
+                {
+                  "type": "button",
+                  "label": "搜索",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", // 重新加载SPU表格，根据新的搜索条件
+                          "componentId": "noteservice", // 触发spu数据加载：注意需要触发service，table仅负责显示数据
+                          "args": { // ignore : 在SPU表格中将自动获取搜索条件
+                            "&": "$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "size": "md",
+                  "level": "primary"
+                }
+              ],
+              "size": "xs",
+              "style": {
+                "position": "static",
+                "display": "block",
+                "flex": "1 1 auto",
+                "flexGrow": 1,
+                "flexBasis": "auto"
+              },
+              "wrapperBody": false,
+              "isFixedHeight": false,
+              "isFixedWidth": false
+            }
+          ],
+          "style": {
+            "position": "static",
+            "flexWrap": "nowrap"
+          },
+          "direction": "row",
+          "justify": "space-evenly",
+          "alignItems": "stretch",
+          "id": "u:0fef52614e51",
+          "isFixedHeight": false,
+          "isFixedWidth": false
+        },{
+          "type": "service",
+          "id":"noteservice",
+          "initFetch": true,
+          "api": {
+            "method": "get",
+            "url": BIZ_API+"/erp/diySolutionNote/list", 
+            "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+            "replaceData": true,
+            "autoRefresh": true,
+            "requestAdaptor": function (api) { //需要根据搜索条件动态组织搜索Query
+              let orgData = {...api.data}; //原有的数据，由于返回数据会装载到一起，不能直接作为搜索数据
+              let targetData = {
+                name: null, //
+              };
+              //根据搜索表单的值设置搜索条件
+              if(orgData.name){
+                targetData.name = orgData.name;
+              }
+              let payload = {
+                ...api,
+                data: targetData //使用组装后的查询条件
+              };
+              console.log("try note search.", payload);
+              return payload;
+            },
+            "adaptor": function (payload, response) {
+              let records = [];
+              payload.result.records.forEach( record => {
+                try{
+                  record.extJson = JSON.parse(record.extInfo);
+                  records.push(record);
+                }catch(err){}
+              });
+              return {
+                total: payload.result && payload.result.total ? payload.result.total : 0,
+                msg: payload.success ? "success" : "failure",
+                data: records, //payload.result.record,
+                status: payload.success ? 0 : 1
+              };
+            },
+            ...BIZ_CONFIG,
+            "data":{
+              name: "*${name}*", //根据名称过滤
+              pageNo: 1,
+              pageSize: 20,
+              //"&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+            }
+          },
+          "body": [
+            {
+              "type": "pagination-wrapper",
+              "position": "bottom",
+              //"inputName": "rows",
+              //"outputName": "rows",
+              "perPage": 10,
+              "body": [
+                {
+                  "type": "table",
+                  "name": "tablenote",
+                  "id": "tablenote",
+                  "label": "",
+                  "columns": [
+                    {
+                      "name": "name",
+                      "label": "名称",
+                      "type": "text",
+                    },
+                    {
+                      "name": "noteType",
+                      "label": "笔记类型",
+                      "type": "text",
+                    },
+                    {
+                      "name": "tags",
+                      "label": "标签",
+                      "type": "text",
+                    },
+                  ],
+                  "strictMode": false,
+                  "canAccessSuperData": true,
+                  "columnsTogglable":false,
+                  "onEvent": {
+                    "rowClick": {
+                      "actions": [         
+                        {
+                          "actionType": "custom",
+                          "script": (context, event, props) => {
+                            console.log("try send note card....",context, props.data);
+                            //发送内容到对话框
+                            ww.sendChatMessage({
+                              msgtype: 'miniprogram',
+                              miniprogram: {
+                                appid: "wx099102889bea2294",//小程序的appid
+                                title: props.data.rowItem.name, //小程序消息的title
+                                imgUrl:props.data.rowItem.logo,//小程序消息的封面图
+                                page:"/modules/note/pages/detail/index.html?id="+props.data.rowItem.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
+                              },
+                            })
+                          }
+                        },
+                      ]
+                    }
+                  }
+                },
+              ]
+            }
+          ]
+        }
+      ],
+      "wrapperBody": false,
+      "mode": "horizontal"
+    }
+    
+  ],
+  "asideResizor": false,
+  "pullRefresh": {
+    "disabled": true
+  },
+  "asideSticky": false,
+  "regions": [
+    "body"
+  ],
+  "data": {
+  }
+};
+
+//已生成海报列表
+export const posterForm = {
+  "type": "page",
+  "name": "posterform",
+  "title": "",
+  "body": [
+    {
+      "type": "form",
+      "wrapWithPanel": false,
+      "className": "-m-4",
+      "body": [
+        {
+          "type": "service",
+          "id":"serviceposter",
+          "initFetch": true,
+          "api": {
+            "method": "get",
+            "url": BIZ_API+"/erp/diyGenPoster/list", 
+            "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+            "replaceData": true,
+            "autoRefresh": true,
+            "adaptor": function (payload, response) {
+              return {
+                total: payload.result && payload.result.total ? payload.result.total : 0,
+                msg: payload.success ? "success" : "failure",
+                data: payload.result,
+                status: payload.success ? 0 : 1
+              };
+            },
+            ...BIZ_CONFIG,
+            "data":{
+              pageNo: 1,
+              pageSize: 20,
+              //"&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+            }
+          },
+          "body": [
+            {
+              "type": "pagination-wrapper",
+              "position": "bottom",
+              //"inputName": "rows",
+              //"outputName": "rows",
+              "perPage": 10,
+              "body": [
+                {
+                  "type": "each",
+                  "name": "records", //指定从数据域中获取用于循环的变量，即： data.records
+                  "className": "w-full", //IMPORTANT：由于生成后多出div，手动将该div设置为flex显示
+                  "items": {
+                    "type": "card",
+                    "className": "w-full",
+                    "header": {
+                      "title": "${title}",
+                    },
+                    "media": {
+                      "type": "image",
+                      "className": "w-36 h-24",
+                      "url": "${url}",
+                      "position": "left"
+                    },
+                    "body":"${itemName}",
+                    //"secondary": "${knowledgeCategoryId_dictText}",
+                    "actions": [
+                      { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
+                        "type": "button",
+                        "label": "发送到聊天",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(e){
+                                  console.log("try send msg ....", e.props.data);
+                                  //发送内容到对话框
+                                  ww.sendChatMessage({
+                                    msgtype: 'image',
+                                    image: {
+                                      imgUrl: e.props.data.url
+                                    }
+                                  })
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+
+                    ],
+                    "toolbar": [
+                      {
+                        "type": "tpl",
+                        "tpl": "${itemType_dictText}",
+                        "className": "label label-warning"
+                      }
+                    ],
+                  }
+                },
+              ],
+            }
+          ]
+        }
+      ],
+      "wrapperBody": false,
+      "mode": "horizontal"
+    }
+    
+  ],
+  "asideResizor": false,
+  "pullRefresh": {
+    "disabled": true
+  },
+  "asideSticky": false,
+  "regions": [
+    "body"
+  ],
+  "data": {
+  }
+};
+
+//已生成内容列表
 export const contentForm = {
   "type": "page",
   "name": "msgform",
@@ -301,7 +636,7 @@ export const contentForm = {
                     },
                     "body":{
                       "type":"tpl",
-                      "tpl":"${solutionNoteId_dictText|raw}",
+                      "tpl":"${itemName}",
                     },
                     //"secondary": "${knowledgeCategoryId_dictText}",
                     "actions": [
@@ -320,7 +655,7 @@ export const contentForm = {
                                   ww.sendChatMessage({
                                     msgtype: 'text',
                                     text: {
-                                      content: e.props.data.solutionNoteId_dictText
+                                      content: e.props.data.title
                                     }
                                   })
                                 }
@@ -341,7 +676,8 @@ export const contentForm = {
                                 "script": function(e){
                                   console.log("try send msg ....", e.props.data);
                                   //发送内容到对话框
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+e.props.data.solutionId)
+                                  //TODO：筛选已发送外部平台URL？
+                                  sendRedirect(e.props.data.url)
                                 }
                               },
                             ]
@@ -352,7 +688,7 @@ export const contentForm = {
                     "toolbar": [
                       {
                         "type": "tpl",
-                        "tpl": "${stockType_dictText}",
+                        "tpl": "${itemType_dictText}",
                         "className": "label label-warning"
                       }
                     ],

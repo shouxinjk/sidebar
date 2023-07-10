@@ -25,7 +25,7 @@ import Amis from "../../amis/components/Amis.vue";
 import 'amis/sdk/tinymce';
 import 'amis/sdk/rest';
 import { getUrlParam } from '/@/utils';
-import { kbForm,solutionForm, aiForm, contentForm, skuForm } from './sidebar.data';
+import { kbForm,solutionForm, aiForm, contentForm, skuForm, noteForm, posterForm } from './sidebar.data';
 import { listenPostMessage, getCorpJsConf, getSuiteJsConf } from './sidebar.api';
 import * as ww from '@wecom/jssdk'; //引入企业微信jssdk
 
@@ -87,8 +87,24 @@ let tabjson = {
     "className":"sticky", //固定tab表头
     "tabs": [
       {
-        "title": "笔记内容",
+        "title": "方案库",
+        "tab": solutionForm
+      },
+      {
+        "title": "产品库",
+        "tab": skuForm 
+      },
+      {
+        "title": "笔记",
         "tab": contentForm
+      },
+      {
+        "title": "海报",
+        "tab": posterForm
+      },
+      {
+        "title": "图文",
+        "tab": contentForm 
       },
       {
         "title": "AI生成",
@@ -98,14 +114,7 @@ let tabjson = {
         "title": "知识库",
         "tab": kbForm
       },
-      {
-        "title": "方案库",
-        "tab": solutionForm
-      },
-      {
-        "title": "产品库",
-        "tab": skuForm 
-      },
+
     ]
   }
 };
@@ -113,15 +122,19 @@ let tabjson = {
 //根据tab类型区分内容显示
 let tab = getUrlParam('tab');//从参数中获取tab类型
 if( tab && tab == "note"){
-  tabjson = contentForm;
+  tabjson = noteForm;
 }else if( tab && tab == "ai"){
   tabjson = aiForm;
 }else if( tab && tab == "kb"){
   tabjson = kbForm;
 }else if( tab && tab == "solution"){
   tabjson = solutionForm;
-}if( tab && tab == "product"){
+}else if( tab && tab == "product"){
   tabjson = skuForm;
+}else if( tab && tab == "content"){
+  tabjson = contentForm;
+}else if( tab && tab == "poster"){
+  tabjson = posterForm;
 }
 
 </script>
