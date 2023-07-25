@@ -33,7 +33,7 @@ listenPostMessage();
 const tabnode = "#itemtypes";
 const tabjson = {
   "type": "page",
-  "name":"helper",
+  "name":"editor",
   "body": {
     "type": "tabs",
     "name": "tabs",

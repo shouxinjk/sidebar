@@ -178,7 +178,7 @@ export const useUserStore = defineStore({
         //添加入口判断，如果是工具条则跳转到相应页面
         //sxToolbar
         console.log("sxToolbar login check.", getUrlParam("origin") );
-        if( getUrlParam("origin") == "helper" ){
+        if( getUrlParam("origin") === "helper" ){
             console.log("sxToolbar:helper");
             //通知上层窗口修改登录状态
             window.parent.postMessage({
@@ -188,10 +188,10 @@ export const useUserStore = defineStore({
                 }
             }, '*');  
             await router.replace("/c2b/toolbar/helper")
-        }else if( getUrlParam("origin") == "sidebar" ){
+        }else if( getUrlParam("origin") === "sidebar" ){
             console.log("sxToolbar:sidebar");
             await router.replace("/c2b/toolbar/sidebar")
-        }else if( getUrlParam("origin") == "editor" ){
+        }else if( getUrlParam("origin") === "editor" ){
             console.log("sxToolbar: mp");
             //通知上层窗口修改登录状态
             window.parent.postMessage({

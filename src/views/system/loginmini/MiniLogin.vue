@@ -37,7 +37,7 @@
                     >{{ t('sys.login.weworkSignInFormTitle') }}
                   </div>
                 </div>
-                <div class="aui-form-box" style="height: 180px">
+                <div class="aui-form-box" style="height: 340px">
                   <a-form ref="loginRef" :model="formData" v-if="activeIndex === 'accountLogin'" @keyup.enter.native="loginHandleClick">
                     <div class="aui-account">
                       <div class="aui-inputClear">
@@ -100,7 +100,7 @@
                   -->
                   <!--企微二维码-->
                   <a-form ref="weworkFormRef" >
-                    <div id="wework_login" v-if="activeIndex === 'weworkLogin'" style="padding-left: 20px;">
+                    <div id="wework_login" v-if="activeIndex === 'weworkLogin'" >
 
                     </div>
                   </a-form>
