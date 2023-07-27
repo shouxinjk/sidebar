@@ -14,10 +14,31 @@
     display:inline;
   }
 
-  div.cxd-Form-item{
-    padding-top: 0;
-    padding-bottom: 0;
+  /**修正移动端 表单布局问题 */
+  .cxd-Form{
+    border: 0 !important;
   }
+  .cxd-Form::before{
+    border: 0 !important;
+  }
+  .cxd-Form::after{
+    border: 0 !important;
+  }
+  div.cxd-Form-item{
+    padding: 6px 0 !important;
+    border: 0 !important;
+  }
+  div.cxd-Form-item::before{
+    border: 0 !important;
+  }
+  div.cxd-Form-item::after{
+    border: 0 !important;
+  }
+</style>
+
+<!--引入AMIS扩展及iconfont-->
+<style>
+	@import "amis/sdk/helper.css";
 </style>
 
 <script setup lang="ts">
@@ -40,16 +61,12 @@ const tabjson = {
     "className":"sticky", //固定tab表头
     "tabs": [
       {
-        "title": "笔记内容",
+        "title": "图文内容",
         "tab": contentForm
       },
       {
         "title": "AI生成",
         "tab": aiForm
-      },
-      {
-        "title": "知识库",
-        "tab": kbForm
       },
       {
         "title": "方案库",
@@ -58,6 +75,10 @@ const tabjson = {
       {
         "title": "产品库",
         "tab": skuForm 
+      },
+      {
+        "title": "知识库",
+        "tab": kbForm
       },
     ]
   }

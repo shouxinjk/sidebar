@@ -2,10 +2,10 @@ import {BasicColumn} from '/@/components/Table';
 import {FormSchema} from '/@/components/Table';
 import {Md5} from 'ts-md5';
 
-import {SEARCH_API, SEARCH_CONFIG, BIZ_API, BIZ_CONFIG, WEB_API } from '/@/settings/iLifeSetting';
+import {SEARCH_API, SEARCH_CONFIG, BIZ_API, BIZ_CONFIG, WEB_API, MP_API } from '/@/settings/iLifeSetting';
 import { getTenantId } from '/@/utils/auth';
 
-import {  isDebug,bizAPI, sendAiMsg, sendKbMsg, copyToClipboard, sendRedirect, hookSop, hookAutoReply } from './editor.api';
+import {  isDebug,bizAPI, sendAiMsg, sendKbMsg, copyToClipboard, sendRedirect, hookSop, hookAutoReply, sendGenContent, copyGenContent, openConentLink, hot, appendText, replaceText } from './editor.api';
 import { DollarCircleTwoTone } from '@ant-design/icons-vue';
 
 import {ToastComponent, AlertComponent, alert, confirm, toast,Drawer} from 'amis-ui';
@@ -285,23 +285,109 @@ export const contentForm = {
                     },
                     "body":{
                       "type":"tpl",
-                      "tpl":"${solutionNoteId_dictText|raw}",
+                      "tpl":"${summary|raw}<br/>来源${itemType_dictText}:${itemName}<br/>内容模板:${templateId_dictText}",
                     },
                     //"secondary": "${knowledgeCategoryId_dictText}",
                     "actions": [
-                      { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
+                      { 
                         "type": "button",
-                        "label": "复制内容",
+                        "label": "内容预览", //跳转到MP预览内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": function(e){
-                                  console.log("try copy kb ....", e.props.data);
-                                  //TODO: 需要获取对应内容
-                                  copyToClipboard("text/html", e.props.data.title + e.props.data.solutionNoteId_dictText);
+                                "script": function(context,doAction,event){ 
+                                  console.log("try jump content", context, event.data);
+                                  openConentLink( event.data );
+                                }
+                              },
+                              {
+                                "actionType": "url",
+                                "args": {
+                                  "url": MP_API+"/archives/${mediaId}",
+                                  "blank": true,
+                                  // "params": {
+                                  //   "name": "jack",
+                                  //   "jon": "${myjon}"
+                                  // },
+                                  // "name": "${myname}",
+                                  // "age": 18
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+                      { 
+                        "type": "button",
+                        "label": "发布/替换正文", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try publish content", context, event.data);
+                                  sendGenContent( event.data );
+                                  // 直接设置数据
+                                  // event.setData(hot.sopEvent);
+                                  //打开抽屉
+                                  // doAction({ //注意：参数通过hot传递，即当前currentSalePackage
+                                  //   "actionType": "drawer", // 显示SKU详情及SKU列表，默认传递当前选中的行数据 rowItem
+                                  //   "drawer": {
+                                  //     "position": "right",
+                                  //     "size": "md",
+                                  //     "closeOnOutside":true,
+                                  //     "title": "基础订阅计划",
+                                  //     "data": {"salePackage": hot.currentSalePackage},
+                                  //     "actions": [],
+                                  //     "body": drawerSalePackages
+                                  //   }
+                                  // });
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+                      { 
+                        "type": "button",
+                        "label": "复制到剪贴板",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try publish content", context, event.data);
+                                  copyGenContent( event.data );
+                                  //copyToClipboard("text/html", e.props.data.title + e.props.data.solutionNoteId_dictText);
+                                  // 直接设置数据
+                                  // event.setData(hot.sopEvent);
+                                  //打开抽屉
+                                  // doAction({ //注意：参数通过hot传递，即当前currentSalePackage
+                                  //   "actionType": "drawer", // 显示SKU详情及SKU列表，默认传递当前选中的行数据 rowItem
+                                  //   "drawer": {
+                                  //     "position": "right",
+                                  //     "size": "md",
+                                  //     "closeOnOutside":true,
+                                  //     "title": "基础订阅计划",
+                                  //     "data": {"salePackage": hot.currentSalePackage},
+                                  //     "actions": [],
+                                  //     "body": drawerSalePackages
+                                  //   }
+                                  // });
+                                }
+                              },
+                              {
+                                "actionType": "toast", // 执行toast提示动作
+                                "args": { // 动作参数
+                                  "msgType": "success",
+                                  "msg": "内容已复制到剪贴板，可直接粘贴"
                                 }
                               },
                             ]
@@ -312,7 +398,7 @@ export const contentForm = {
                     "toolbar": [
                       {
                         "type": "tpl",
-                        "tpl": "${stockType_dictText}",
+                        "tpl": "${contentType_dictText}",
                         "className": "label label-warning"
                       }
                     ],
@@ -898,236 +984,343 @@ export const aiForm = {
       "className": "-m-4",
       "data": { //数据通过page在搜索表单及数据列表间传递
         "type":"chatgpt",
-        "prompt":""
+        // "prompt":"" //禁止设置页面data，避免按钮触发reload事件参数被覆盖
       },
       "body": [
         {
-          "type": "flex",
-          "items": [
+          "type": "input-group",
+          "label": "",
+          "body": [
+            // {
+            //   "type": "select",
+            //   "label":"",
+            //   "placeholder": "选择AI",
+            //   // "className":"w-full",
+            //   "name": "type",
+            //   "source":{
+            //     "method": "get",
+            //     "url": BIZ_API+"/erp/stoService/list?type=ai-text", 
+            //     "adaptor": function (payload, response) {
+            //       //组织下拉选项options
+            //       var options = [];
+            //       payload.result.records.forEach( record => {
+            //         options.push({
+            //           label: record.name,
+            //           value: record.code?record.code:record.id
+            //         })
+            //       });
+            //       return {
+            //         status: payload.success ? 0 : 1,
+            //         msg: payload.success ? "success" : "failure",
+            //         data: {
+            //           options: options
+            //         },
+            //       };
+            //     },
+            //     ...BIZ_CONFIG,
+            //     "data":{}
+            //   },
+            //   "multiple": false
+            // },
             {
-              "type": "container",
-              "body": [
-                {
-                  "type": "select",
-                  "label":"",
-                  "placeholder": "选择AI",
-                  "className":"w-full",
-                  "name": "type",
-                  "source":{
-                    "method": "get",
-                    "url": BIZ_API+"/erp/stoService/list?type=ai-text", 
-                    "adaptor": function (payload, response) {
-                      //组织下拉选项options
-                      var options = [];
-                      payload.result.records.forEach( record => {
-                        options.push({
-                          label: record.name,
-                          value: record.code?record.code:record.id
-                        })
-                      });
-                      return {
-                        status: payload.success ? 0 : 1,
-                        msg: payload.success ? "success" : "failure",
-                        data: {
-                          options: options
-                        },
-                      };
-                    },
-                    ...BIZ_CONFIG,
-                    "data":{}
-                  },
-                  "multiple": false
-                }
-              ],
-              "size": "xs",
-            },
-            {
-              "type": "container",
-              "body": [
-                {
-                  "type": "input-text",
-                  "className":"w-full",
-                  "placeholder": "提示词", 
-                  "name": "prompt"
-                }
-              ],
-              "size": "xs",
-              "style": {
-                "position": "static",
-                "display": "block",
-                "flex": "1 1 auto",
-                "flexGrow": 1,
-                "flexBasis": "auto"
+              "type": "input-text",
+              "className":"w-full _sx_region",
+              "placeholder": "输入提示开始生成", 
+              "validations": {
+                "notEmptyString": true
               },
-              "wrapperBody": false,
-              "isFixedHeight": false,
-              "isFixedWidth": false
+              "validationErrors": {
+                "notEmptyString": "请输入点什么才能生成哦~~"
+              },
+              "name": "query"
             },
             {
-              "type": "container",
-              "body": [
+              "type": "dropdown-button",
+              "label": "",
+              // "hideCaret": true,
+              "buttons": [
                 {
                   "type": "button",
-                  "label": "生成",
+                  "label": "改写",
                   "onEvent": {
                     "click": {
                       "actions": [
                         {
-                          "actionType": "reload", // 重新加载SPU表格，根据新的搜索条件
-                          "componentId": "generateContent", // 触发spu数据加载：注意需要触发service，table仅负责显示数据
-                          "args": { // ignore : 在SPU表格中将自动获取搜索条件
-                            "&": "$$"
+                          "actionType": "reload", 
+                          "componentId": "generateContent", 
+                          "data": { 
+                            "prompt": "改写",
+                            "&":"$$"
                           }
                         }
                       ]
                     }
                   },
-                  "size": "xs",
-                  "level": "primary"
-                }
-              ],
-              "size": "xs",
-              "style": {
-                "position": "static",
-                "display": "block",
-                "flex": "1 1 auto",
-                "flexGrow": 1,
-                "flexBasis": "auto"
-              },
-              "wrapperBody": false,
-              "isFixedHeight": false,
-              "isFixedWidth": false
+                },
+                {
+                  "type": "button",
+                  "label": "缩写",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "generateContent", 
+                          "data": { 
+                            "prompt": "缩写",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "扩写",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "generateContent", 
+                          "data": { 
+                            "prompt": "扩写",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "续写",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "generateContent", 
+                          "data": { 
+                            "prompt": "续写",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+              ]
             },
-          ],
-          "style": {
-            "position": "static",
-            "flexWrap": "nowrap"
-          },
-          "direction": "row",
-          "justify": "space-evenly",
-          "alignItems": "stretch",
-          "id": "u:0fef52614e51",
-          "isFixedHeight": false,
-          "isFixedWidth": false
+            {
+              "type": "button",
+              "label": "生成",
+              "onEvent": {
+                "click": {
+                  "actions": [
+                    {
+                      "actionType": "reload", 
+                      "componentId": "generateContent", 
+                      "data": { 
+                        "prompt":"",
+                        "&": "$$"
+                      }
+                    }
+                  ]
+                }
+              },
+              "size": "md",
+              "level": "primary"
+            }
+          ]
         },
         {
           "type": "service",
           "id":"generateContent",
-          "initFetch": true,
-          "api": {
+          "initFetch": false,
+          "api": { //直接请求生成
             "method": "post",
-            "url": SEARCH_API+"/spu/_search", 
+            // "url": BIZ_API+"/dify/completion-messages", 
+            "url": BIZ_API+"/dify/chat-messages", 
             "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
             "replaceData": true,
             "autoRefresh": true,
-            "requestAdaptor": function (api) { //TODO：根据选择的AI生成器分别组织内容生成
-              let orgData = {...api.data}; //原有的数据，由于返回数据会装载到一起，不能直接作为搜索数据
-              let targetData = {
-                from: orgData.from,
-                size: orgData.size,
-                query: orgData.query,
-                sort: orgData.sort
-              };
+            "requestAdaptor": function (api) { //组织prompts
+              console.log("before try generate", api);
+              let orgData = {...api.data}; //原有的数据
+              //组织prompts
+              let prompts = { //简单prompts组织
+                    "inputs":{},
+                    "user":"user"+ userStore.getUserInfo?.id,
+                    "respond_mode":"streaming"
+                  };
+                  
+              if(orgData.prompt && orgData.prompt.trim().length>0){
+                prompts.query = (orgData.query?orgData.query+" ":"")+orgData.prompt+" "+orgData.content;
+              }
 
-              //根据搜索表单的值设置搜索条件
-              if(orgData.region){
-                targetData.query.bool.must.push({ "match": { "region": orgData.region } });
+              //根据操作类型设置内容替换类别：续写需要在当前内容上增加否则直接替换
+              hot.currentContent = orgData.content || ""; //记录当前的内容
+              if( orgData.prompt === "续写"){
+                hot.replaceContent = false;
+              }else{
+                hot.replaceContent = true;
               }
-              if(orgData.keyword){
-                targetData.query.bool.must.push({ "match": { "keyword": orgData.keyword } });
-              }
-              return {
+
+              //提交生成参数
+              let targetData = {
+                ...orgData,
+                ...prompts,
+              };
+        
+              let payload = {
                 ...api,
                 data: targetData //使用组装后的查询条件
               };
+              console.log("after try generate.", payload);
+              return payload;
             },
             "adaptor": function (payload, response) {
+              console.log("generate done.", payload);
+              //TODO添加计费
+              //savePosterGenerateRecord("note",hot.note, posterInfo, payload);
+              //根据操作类型处理返回内容
+              let answer = "<p>"+payload.answer.replace(/\n/g, "</p><p>")+"</p>";
+              if(!hot.replaceContent){
+                answer = hot.currentContent + answer;
+              }
               return {
-                total: payload.hits && payload.hits.total ? payload.hits.total : 0,
-                msg: payload.hits && payload.hits.total >0 ? "success" : "failure",
+                msg: "",
                 data: {
-                  //records: payload.hits && payload.hits.total >0 ? mappingSpu(payload.hits.hits): []
-                },
-                status: payload.hits ? 0 : 1
+                  conversation_id: payload.conversation_id, //暂时保持，可以支持多轮生成
+                  content: answer,
+                  query: "",//生成后清空query
+                }, 
+                status: 0
               };
             },
-            SEARCH_CONFIG,
             "data":{
-              "from":0,
-              "size":30,
-              "query": {
-                "bool" : {
-                  "must" : [
-                    /**
-                      {
-                        "nested": {
-                            "path": "tenant",
-                            "query": {
-                                "term" : { "tenant.id": 0 } //public: 公库，private： 私库
-                            }
-                        }
-                      },
-                    //** */
-                  ]
-                }
-              },
-              "sort": [
-                  { "_score":   { "order": "desc" }}
-              ],
-              "&": "$$" //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
-            }
+              "&":"$$",
+            },
+            "headers": BIZ_CONFIG.headers,
           },
-          "body": [ 
+          "body": [
             {
-              "type": "textarea",
-              "label": "",
-              "placeholder": "生成内容",
-              "name": "content",
-              "className": "w-full",
+              "type": "hidden",
+              "label": "会话ID",
+              "name": "conversation_id",
             },
             {
-              "type": "button",
-              "label": "获取提示词帮助，以生成更好的内容",
-              "className":"border-none text-info",
-              "onClick": function(e,props){
-                console.log("try redirect prompts page", e, props);
-                sendRedirect("https://www.awesomegptprompts.com/")
+              "type": "input-rich-text",
+              "label": "",
+              "name": "content",
+              "mode": "vertical",
+              // "className": "border-none p-0",
+              //"receiver": "/api/upload/image",
+              "vendor": "tinymce",
+              "options": {
+                "menubar": "true",
+                "height": 680,
+                "plugins": [
+                  "advlist",
+                  "autolink",
+                  "link",
+                  "image",
+                  "lists",
+                  "charmap",
+                  "preview",
+                  "anchor",
+                  "pagebreak",
+                  "searchreplace",
+                  "wordcount",
+                  "visualblocks",
+                  "visualchars",
+                  "code",
+                  "fullscreen",
+                  "insertdatetime",
+                  "media",
+                  "nonbreaking",
+                  "table",
+                  "emoticons",
+                  "template",
+                  "help"
+                ],
+                "toolbar": "undo redo | formatselect | bold italic backcolor  | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help"
               }
             },
-            {
-              "type": "container",
+            { //笔记内容操作按钮，包括缩写、扩写、续写、改写，以及添加到笔记
+              "type": "wrapper",
+              // "className": "border-none p-0",
               "body": [
-                { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
+                { // 替换正文
                   "type": "button",
-                  "label": "复制内容",
+                  "label": "发布/替换正文",
                   "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                   "onEvent": {
                     "click": {
                       "actions": [
                         {
                           "actionType": "custom",
-                          "script": function(e){
-                            console.log("try insert ai ....", e.props.data);
-                            //sendAiMsg(e.props.data)
-                            copyToClipboard("text/html", e.props.data.content);
+                          "script": function(context,doAction,event){
+                            console.log("try publish content", context, event.data);
+                            replaceText( event.data );
                           }
                         },
                       ]
                     }
                   }
                 },
-              ],
-              "size": "xs",
-              "style": {
-                "position": "static",
-                "display": "block",
-                "flex": "1 1 auto",
-                "flexGrow": 1,
-                "flexBasis": "auto"
-              },
-              "wrapperBody": false,
-              "isFixedHeight": false,
-              "isFixedWidth": false
+                {
+                  "type": "button-group",
+                  "buttons": [
+                    { // 插入/附加到正文
+                      "type": "button",
+                      "label": "添加到正文",
+                      "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                      "onEvent": {
+                        "click": {
+                          "actions": [
+                            {
+                              "actionType": "custom",
+                              "script": function(context,doAction,event){
+                                console.log("try append content", context, event.data);
+                                appendText( event.data );
+                              }
+                            },
+                          ]
+                        }
+                      }
+                    },
+                    { // 复制到剪贴板
+                      "type": "button",
+                      "label": "复制到剪贴板",
+                      "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                      "onEvent": {
+                        "click": {
+                          "actions": [
+                            {
+                              "actionType": "custom",
+                              "script": function(e){
+                                console.log("try insert ai ....", e.props.data);
+                                //sendAiMsg(e.props.data)
+                                copyToClipboard("text/html", e.props.data.content);
+                              }
+                            },
+                            {
+                              "actionType": "toast", // 执行toast提示动作
+                              "args": { // 动作参数
+                                "msgType": "success",
+                                "msg": "内容已复制到剪贴板，可直接粘贴"
+                              }
+                            },
+                          ]
+                        }
+                      }
+                    },
+                  ]
+                },
+              ]
             },
           ]
         }

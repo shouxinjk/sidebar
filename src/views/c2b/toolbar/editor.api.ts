@@ -4,13 +4,14 @@ import {Md5} from 'ts-md5';
 import { getTenantId, getToken } from "/@/utils/auth";
 import { getTenantById } from '/@/views/system/tenant/tenant.api';
 import { router } from '/@/router';
-import {SEARCH_API, SEARCH_CONFIG, BIZ_CONFIG, WEWORK_API} from '/@/settings/iLifeSetting';
+import {SEARCH_API, SEARCH_CONFIG, BIZ_CONFIG, WEWORK_API, MP_API, MP_CONFIG, BIZ_API} from '/@/settings/iLifeSetting';
 import { useGlobSetting } from '/@/hooks/setting';
 import { timestamp } from '@vueuse/shared';
 import { reactive } from 'vue';
 import { hostname } from 'os';
 import { doLogout} from '/@/api/sys/user';
 import { useUserStore } from '/@/store/modules/user';
+import { flatMap } from 'lodash-es';
 const userStore = useUserStore();
 
 const glob = useGlobSetting();
@@ -27,7 +28,88 @@ export const bizAPI = {
 }
 
 //调试
-export const isDebug: boolean = false;
+export const isDebug: boolean = true;
+
+//操作界面状态数据
+export const hot = reactive({
+  replaceContent: true, //记录操作类型，是否需要替换当前内容，对于续写则为添加
+  currentContent: "", //记录当前生成的内容
+});
+
+//打开内容链接：在iframe中不能直接完成，需要postMessage 到父窗口
+export const openConentLink = ( genRecord ) => {
+  console.log("try jump to gen content", genRecord);
+  window.parent.postMessage({
+      action: 'sxRediret',
+      url: genRecord.url,
+      // url: MP_API+"/archives/"+genRecord.mediaId,
+  }, '*');  
+}
+
+//将文字内容替换到正文区域
+export const replaceText = ( genRecord ) => {
+  console.log("try replace gen content");
+  //将内容推送到第三方内容平台
+  window.parent.postMessage({
+    action: 'sxPublishContent',
+    title: "",
+    content: genRecord.content,
+  }, '*'); 
+}
+
+//将文字内容添加到正文区域
+export const appendText = ( genRecord ) => {
+  console.log("try append gen content");
+  //将内容推送到第三方内容平台
+  window.parent.postMessage({
+    action: 'sxAppendContent',
+    title: "",
+    content: genRecord.content,
+  }, '*'); 
+}
+
+
+//获取并将内容推送到内容平台页面
+export const sendGenContent = ( genRecord ) => {
+  console.log("try send gen content");
+  //从自有内容平台获取内容
+  axios
+    .get(MP_API + "/wp-json/wp/v2/posts/"+genRecord.mediaId, {
+          ...MP_CONFIG,
+          params:{}
+        })
+    .then(res => { 
+      console.log("got content.",res);
+      //将内容推送到第三方内容平台
+      window.parent.postMessage({
+          action: 'sxPublishContent',
+          title: res.data.title.rendered,
+          content: res.data.content.rendered,
+      }, '*');  
+    })
+    .catch(function (error) { 
+      console.log("failed get content",error);
+    });
+}
+
+//获取并将内容复制到剪贴板
+export const copyGenContent = ( genRecord ) => {
+  console.log("try copy gen content");
+  //从自有内容平台获取内容
+  axios
+    .get(MP_API + "/wp-json/wp/v2/posts/"+genRecord.mediaId, {
+          ...MP_CONFIG,
+          params:{}
+        })
+    .then(res => { 
+      console.log("got content.",res);
+      //将内容复制到剪贴板
+      copyToClipboard("text/html", res.data.content.rendered);
+    })
+    .catch(function (error) { 
+      console.log("failed get content",error);
+    });
+}
 
 //接受知识库消息，并自动发送到对话框
 export const sendKbMsg = ( msg ) => {
@@ -124,6 +206,61 @@ export const sendWebhook = (data) => {
       });
 }
 
+//发送AIGC请求
+export const aigcGenContent = (data) => {
+  console.log("try aigc generate.", data);
+  //获取conversation_id
+  let conversation_id = localStorage.getItem("sxConversationId") || "";
+  let currentContent = data.content;
+  //组织prompt： 如果在会话内，则无需带上content，节省tokens
+  let query = data.prompt+" "+currentContent;
+  if(conversation_id && conversation_id.trim().length>0){
+    query = data.prompt;
+  }
+  //localStorage.setItem("sxCurrentContent", $("#_sxGenContent").val());
+  let record = {
+    "coversation_id": conversation_id,
+    "query": data.prompt+" "+currentContent, 
+    "inputs":{},
+    "user":"user"+ userStore.getUserInfo?.id,
+    "respond_mode":"streaming"
+  };
+  //提交创建
+  axios
+    .post(BIZ_API+"/dify/chat-messages",record,BIZ_CONFIG)
+    .then(res => { 
+      console.log("aigc content generated.",res);
+      let answer = res.data.answer;//.replace(/\n/g, "<br/>");
+      // //根据prompt类型，分别处理内容到本地缓存
+      // if( data.prompt === "续写" ){
+      //     currentContent = currentContent + answer;
+      // }else{
+      //     currentContent = answer;
+      // }
+      // localStorage.setItem("sxCurrentContent", currentContent ); //设置到缓存
+      localStorage.setItem("sxConversationId", res.data.conversation_id ); //设置到缓存
+      //发送通知到接收端
+      window.parent.postMessage({
+        action:'sxAigcAction',
+        data:{
+            prompt: data.prompt,
+            content: answer
+        }
+      }, '*');  
+    })
+    .catch(function (error) { 
+      console.log("failed request agic",error);
+      //发送通知到接收端
+      window.parent.postMessage({
+        action:'sxAigcAction',
+        data:{
+            prompt: "续写", //出错时强制认为是续写
+            content: "糟糕，出错了，请重新尝试~~"
+        }
+      }, '*');  
+    });
+}
+
 /**
  * 记录自动回复事件
  * @param data 
@@ -190,6 +327,10 @@ export const listenPostMessage = () => {
           }else if (data.action == 'setToolbarStatus' && data.data ) {//设置工具条状态
             console.log("set toolbar status");
             localStorage.setItem("sxToolbarStatus", JSON.stringify(data.data))
+          }else if (data.action == 'sxAigcAction' && data.data ) {//AIGC请求内容生成
+            console.log("aigc action. ", data.data);
+            //调用接口完成内容生成，并将结果存储到本地缓存
+            aigcGenContent(data.data);
           }else if (data.action == 'logout' ) {//退出登录
             console.log("logout");
             try{
