@@ -34,6 +34,17 @@
   div.cxd-Form-item::after{
     border: 0 !important;
   }
+  div.cxd-Card-title {
+    white-space: wrap !important;
+    word-break: break-all;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  /* div.cxd-Select{
+
+  } */
 </style>
 
 <!--引入AMIS扩展及iconfont-->
@@ -45,7 +56,7 @@
 import Amis from "../../amis/components/Amis.vue";
 import 'amis/sdk/tinymce';
 import 'amis/sdk/rest';
-import { kbForm,solutionForm, aiForm, contentForm, skuForm } from './editor.data';
+import { kbForm,solutionForm, aiForm, contentForm, skuForm, posterForm } from './editor.data';
 import { listenPostMessage } from './editor.api';
 
 //监听post message
@@ -61,12 +72,12 @@ const tabjson = {
     "className":"sticky", //固定tab表头
     "tabs": [
       {
-        "title": "图文内容",
+        "title": "图文",
         "tab": contentForm
       },
       {
-        "title": "AI生成",
-        "tab": aiForm
+        "title": "海报",
+        "tab": posterForm
       },
       {
         "title": "方案库",
@@ -79,6 +90,10 @@ const tabjson = {
       {
         "title": "知识库",
         "tab": kbForm
+      },
+      {
+        "title": "AI生成",
+        "tab": aiForm
       },
     ]
   }

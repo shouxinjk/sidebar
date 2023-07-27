@@ -111,6 +111,28 @@ export const copyGenContent = ( genRecord ) => {
     });
 }
 
+//将海报内容组织为html放入剪贴板
+export const copyGenPoster = ( genRecord ) => {
+  console.log("try copy gen poster");
+  //将内容复制到剪贴板
+  let html = `
+    <p>
+      <img src="__imgsrc"/>
+    </p>
+  `;
+
+  copyToClipboard("text/html", html.replace(/__imgsrc/g, genRecord.url));
+}
+
+//接受图片URL，并自动发送到对话框
+export const sendImageMsg = ( url ) => {
+  console.log("try send img msg", url);
+  window.parent.postMessage({
+      action: 'sxAppendImage',
+      url: url,
+  }, '*');  
+}
+
 //接受知识库消息，并自动发送到对话框
 export const sendKbMsg = ( msg ) => {
     console.log("try send kb msg", msg);
