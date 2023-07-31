@@ -87,32 +87,32 @@ let tabjson = {
     "className":"sticky", //固定tab表头
     "tabs": [
       {
-        "title": "方案库",
+        "title": "方案",
         "tab": solutionForm
       },
       {
-        "title": "产品库",
+        "title": "产品",
         "tab": skuForm 
       },
       {
         "title": "笔记",
-        "tab": contentForm
-      },
-      {
-        "title": "海报",
-        "tab": posterForm
+        "tab": noteForm
       },
       {
         "title": "图文",
         "tab": contentForm 
       },
       {
-        "title": "AI生成",
-        "tab": aiForm
+        "title": "海报",
+        "tab": posterForm
       },
       {
         "title": "知识库",
         "tab": kbForm
+      },
+      {
+        "title": "AI生成",
+        "tab": aiForm
       },
 
     ]

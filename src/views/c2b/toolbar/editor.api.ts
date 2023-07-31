@@ -34,6 +34,8 @@ export const isDebug: boolean = true;
 export const hot = reactive({
   replaceContent: true, //记录操作类型，是否需要替换当前内容，对于续写则为添加
   currentContent: "", //记录当前生成的内容
+  product: {id: "", name: "", type: "" },
+
 });
 
 //打开内容链接：在iframe中不能直接完成，需要postMessage 到父窗口

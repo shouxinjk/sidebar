@@ -12,8 +12,234 @@ import {ToastComponent, AlertComponent, alert, confirm, toast,Drawer} from 'amis
 import { DrawerAction } from 'amis-core/lib/actions/DrawerAction';
 
 import { useUserStore } from '/@/store/modules/user';
+import { addPublishRecord, getPublishUrls } from '../travel/publish.api';
 const userStore = useUserStore();
 
+
+//已发布链接弹框：能够从已发布的多个链接中选择
+//默认是一个service，能够根据选中的商品或方案查询发布记录得到
+export const linkDialog = {
+  "type": "service",
+  "id":"linkservice",
+  "className":"mb-20",
+  "initFetch": true,
+  "api": {
+    "method": "get",
+    "url": BIZ_API+"/erp/diyPublishProduct/list", 
+    "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+    "replaceData": true,
+    "autoRefresh": true,
+    "requestAdaptor": function (api) { // 把当前触发条目作为hot，一并放入返回结果列表
+      let orgData = {...api.data}; 
+      console.log("got api data", orgData);
+      
+      console.log("get hot product.", hot.product);
+      let targetData = {
+        itemType: hot.product.type,
+        itemId: hot.product.id,
+      };
+
+      let payload = {
+        ...api,
+        data: targetData //使用组装后的查询条件
+      };
+      console.log("try pub search.", payload);
+      return payload;
+    },
+    "adaptor": function (payload, response) {
+      //如果publishRecords为空，则自动补全平台默认发布，包括ilife及miniprog两个
+      let pubRecords = new Array();
+      if(payload.result.records.length ===0){
+        pubRecords.push({
+          platformSourceId: "ilife",
+          itemType: hot.product.type,
+          itemId: hot.product.id,
+          itemName: hot.product.name,
+          publishUrl: WEB_API+"/ilife-web/"+hot.product.type+".html?id="+hot.product.id, //链接到web端
+        });
+        pubRecords.push({
+          platformSourceId: "miniprog",
+          itemType: hot.product.type,
+          itemId: hot.product.id,
+          itemName: hot.product.name,
+          publishUrl: WEB_API+"/ilife-web/"+hot.product.type+".html?id="+hot.product.id, //链接到web端
+        });
+
+        pubRecords.forEach( item => {
+          //console.log("add auto publish record.", item);
+          let publish_ilife = addPublishRecord( item );
+        });
+        
+      }else{
+        pubRecords = payload.result.records;
+      }
+
+      //获取platform信息及已发布url、二维码信息
+      let links = getPublishUrls( pubRecords );
+      console.log("got links. ", links);
+
+      return {
+        total: payload.result.total,
+        msg: "",
+        data: {
+          links: links
+        },
+        status: 0
+      };
+    },
+    ...BIZ_CONFIG,
+    "data":{
+      pageNo: 1,
+      pageSize: 20,
+      itemId: "${id}", //根据itemId精准匹配
+      itemName: "${name}",
+      // "&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+    }
+  },
+  "body": {
+    "type": "each",
+    "name": "links", //指定从数据域中获取用于循环的变量，即： data.records
+    // "className": "w-full", //IMPORTANT：由于生成后多出div，手动将该div设置为flex显示
+    "placeholder": "没有发布记录",
+    "items": {
+      "type": "card",
+      "className": "w-full",
+      "header": {
+        "title": "${itemName}",
+      },
+      "media": {
+        "type": "image",
+        "className": "h-24 w-24",
+        "url": "https://www.biglistoflittlethings.com/static/logo/distributor/${platform}.png",
+        "position": "left"
+      },
+      "body":{
+        "type":"tpl",
+        "className": "text-xs",
+        "tpl":"发布平台：${platformSourceId_dictText} <br/>发布时间：${createTime}",
+      },
+      // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数：'+extJson.days:''}",
+      "actions": [
+        { 
+          "type": "button",
+          "label": "前往查看", //跳转到MP预览内容
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
+                    console.log("try redirect url",context, props.data);
+                    sendRedirect(props.data.publishUrl)
+                  },
+                },
+              ]
+            }
+          }
+        },
+        { 
+          "type": "button",
+          "label": "添加到正文", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": function(context,doAction,event){
+                    console.log("try copy poster url", context, event.data);
+                    let url = event.data.publishUrl;
+                    //TODO 是否采用短码？
+                    //url = WEB_API+"/ilife-web-wx/x.html?x="+event.data.url.shortCode;
+                    appendText( {
+                      content: "<a href='"+ url +"' target='_blank'>"+event.data.itemName+"</a>"
+                    } );
+                  }
+                },
+                {
+                  "actionType": "toast", // 执行toast提示动作
+                  "args": { // 动作参数
+                    "msgType": "success",
+                    "msg": "图文链接已添加到正文"
+                  }
+                },
+              ]
+            }
+          }
+        },
+        { 
+          "type": "button",
+          "label": "复制到剪贴板",
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": function(context,doAction,event){
+                    console.log("try copy link", context, event.data);
+                    let url = event.data.publishUrl;
+                    //TODO 是否采用短码？
+                    //url = WEB_API+"/ilife-web-wx/x.html?x="+event.data.url.shortCode;                    
+                    copyToClipboard("text/html", "<a href='"+url+"' target='_blank'>"+event.data.itemName+"</a>");
+                  }
+                },
+                {
+                  "actionType": "toast", // 执行toast提示动作
+                  "args": { // 动作参数
+                    "msgType": "success",
+                    "msg": "文字链接已复制到剪贴板，可直接粘贴"
+                  }
+                },
+              ]
+            }
+          }
+        },
+      ],
+      "toolbar": [
+        // {
+        //   "type": "tpl",
+        //   "tpl": "${extJson.from || extJson.region}",
+        //   "className": "label label-warning"
+        // },
+        {
+          "type": "mapping",
+          "label": "来源类型",
+          "name": "itemType",
+          "map": {
+            "solution": {
+              "type": "tpl",
+              "tpl": "定制方案",
+              "className": "label label-success"
+            },
+            "spu": {
+              "type": "tpl",
+              "tpl": "产品包/资源",
+              "className": "label label-success"
+            },
+            "sku": {
+              "type": "tpl",
+              "tpl": "产品/套餐",
+              "className": "label label-success"
+            },
+            "note": {
+              "type": "tpl",
+              "tpl": "笔记",
+              "className": "label label-success"
+            },
+            "*":{
+              "type": "tpl",
+              "tpl": "${itemType_dictText}",
+              "className": "label label-success"
+            }
+          }
+        },
+        
+      ],
+    }
+  },
+};
 
 //海报列表，能够展示海报，支持搜索
 export const posterForm = {
@@ -136,7 +362,7 @@ export const posterForm = {
                       "className": "text-xs",
                       "tpl":"类型：${itemType_dictText} <br/>来源：${itemName} <br/>模板：${templateId_dictText}<br/>生成时间：${createTime }",
                     },
-                    // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数:'+extJson.days:''}",
+                    // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数：'+extJson.days:''}",
                     "actions": [
                       { 
                         "type": "button",
@@ -382,9 +608,6 @@ export const solutionForm = {
               payload.result.records.forEach( record => {
                 try{
                   record.extJson = JSON.parse(record.extInfo);
-                  if(record.extJson.region && record.extJson.region.trim().length>0){
-                    record.extJson.region = record.extJson.region.split(" ")[0].trim();
-                  }
                   records.push(record);
                 }catch(err){}
               });
@@ -431,9 +654,9 @@ export const solutionForm = {
                     "body":{
                       "type":"tpl",
                       "className": "text-xs",
-                      "tpl":"出发地：${(extJson.from}<br/>目的地：${extJson.region}<br/>行程天数:${extJson.days}<br/>${description}",
+                      "tpl":"出发地：${extJson.from}<br/>目的地：${extJson.region}<br/>行程天数:${extJson.days}<br/>${description|raw}",
                     },
-                    // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数:'+extJson.days:''}",
+                    "secondary": "￥${price||'--'}",
                     "actions": [
                       { 
                         "type": "button",
@@ -462,11 +685,48 @@ export const solutionForm = {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
-                                  console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                "script": (context, doAction, props) => { //设置当前选中条目，并显示对话框
+                                  console.log("set hot product", props.data);
+                                  //修改当前操作对象
+                                  hot.product = {  
+                                    ...props.data,
+                                    type: props.data.source?'sku':'solution'
+                                  };
+                                  //打开对话框
+                                  doAction({ //显示已发布链接列表
+                                    "actionType": "dialog",
+                                    "dialog": {
+                                      "title": "已发布列表",
+                                      "size": "sm",
+                                      "closeOnEsc": true,
+                                      "closeOnOutside": true,
+                                      "actions": [
+                                        {
+                                          "type": "button",
+                                          "label": "前往发布/上架 ${name}",
+                                          "className": "border-none text-right text-primary",
+                                          "onEvent": {
+                                            "click": {
+                                              "actions": [
+                                                {
+                                                  "actionType": "custom",
+                                                  "script": (context, event, props) => { 
+                                                    console.log("try redirect",context, props.data);
+                                                    sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                                    
+                                                  },
+                                                },
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "body": linkDialog
+                                    }
+                                  });
                                 },
                               },
+                              
                             ]
                           }
                         }
@@ -526,7 +786,7 @@ export const solutionForm = {
                           },
                           "*":{
                             "type": "tpl",
-                            "tpl": "${extJson.from || extJson.region || ''}",
+                            "tpl": "${extJson.from || extJson.region || '多目的地'}",
                             "className": "label label-warning"
                           }
                         }
@@ -648,7 +908,7 @@ export const contentForm = {
                     "body":{
                       "type":"tpl",
                       "className": "text-xs ",
-                      "tpl":"<br/>类型：${itemType_dictText} <br/>来源：${itemName} <br/>模板：${templateId_dictText}<br/>生成时间：${createTime}<br/>${summary}",
+                      "tpl":"<br/>类型：${itemType_dictText} <br/>来源：${itemName} <br/>模板：${templateId_dictText}<br/>生成时间：${createTime}<br/>${summary|raw}",
                     },
                     //"secondary": "${knowledgeCategoryId_dictText}",
                     "actions": [
@@ -813,59 +1073,285 @@ export const skuForm = {
           "label": "",
           // "className": "w-full",
           "body": [
-            // {
+            // { //存在适配问题，显示风格不正确。采用手动方式作为下拉按钮显示
             //   "type": "select",
             //   "label": "",
-            //   "placeholder": "库存类型",
-            //   "name": "stockType",
-            //   "options": [
-            //     {
-            //       "label": "自有/签约",
-            //       "value": "contract"
+            //   "name": "itemType",
+            //   "multiple": false,
+            //   "className": "is-pc",
+            //   "source": {
+            //     "method": "get",
+            //     "url": BIZ_API+"/sys/dict/getDictItems/stock_type", 
+            //     "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+            //     "replaceData": true,
+            //     "autoRefresh": true,
+            //     "adaptor": function (payload, response) {
+            //       console.log("got dict items", payload);
+            //       let options = payload.result;
+            //       options.splice(0,0,{
+            //         value: "",
+            //         label: "不限",
+            //       });
+            //       return {
+            //         total: payload.result && payload.result.total ? payload.result.total : 0,
+            //         msg: payload.success ? "success" : "failure",
+            //         data: options, //payload.result,
+            //         status: payload.success ? 0 : 1
+            //       };
             //     },
-            //     {
-            //       "label": "外部库存",
-            //       "value": "quote"
+            //     ...BIZ_CONFIG,
+            //     "data":{
+            //       //"&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
             //     }
-            //   ]
+            //   },
             // },
-            {
-              "type": "select",
-              "label": "",
-              "name": "itemType",
-              "multiple": false,
-              "className": "is-pc",
-              "source": {
-                "method": "get",
-                "url": BIZ_API+"/sys/dict/getDictItems/stock_type", 
-                "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
-                "replaceData": true,
-                "autoRefresh": true,
-                "adaptor": function (payload, response) {
-                  console.log("got dict items", payload);
-                  let options = payload.result;
-                  options.splice(0,0,{
-                    value: "",
-                    label: "不限",
-                  });
-                  return {
-                    total: payload.result && payload.result.total ? payload.result.total : 0,
-                    msg: payload.success ? "success" : "failure",
-                    data: options, //payload.result,
-                    status: payload.success ? 0 : 1
-                  };
-                },
-                ...BIZ_CONFIG,
-                "data":{
-                  //"&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
-                }
-              },
-            },
             {
               "type": "input-text",
               // "className":"w-full",
               "placeholder": "关键字", 
               "name": "keyword"
+            },
+            {
+              "type": "dropdown-button",
+              "label": "",
+              // "hideCaret": true,
+              "buttons": [
+                {
+                  "type": "button",
+                  "label": "酒店",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "hotel",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                // {
+                //   "type": "button",
+                //   "label": "机票",
+                //   "onEvent": {
+                //     "click": {
+                //       "actions": [
+                //         {
+                //           "actionType": "reload", 
+                //           "componentId": "servicesku", 
+                //           "data": { 
+                //             "itemType": "ticket",
+                //             "&":"$$"
+                //           }
+                //         }
+                //       ]
+                //     }
+                //   },
+                // },
+                {
+                  "type": "button",
+                  "label": "交通接驳",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "vehicle",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "景点门票",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "scene",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "观光日游",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "tour",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "租车/包车",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "car",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "演出赛事",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "show",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "餐饮美食",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "restaurant",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "娱乐休闲",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "leisure",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "旅行服务",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "service",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "旅游商品",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "goods",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "签证",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "visa",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "导游",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "guide",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+
+              ]
             },
             {
               "type": "button",
@@ -1004,9 +1490,9 @@ export const skuForm = {
                     "body":{
                       "type":"tpl",
                       "className": "text-xs",
-                      "tpl":"所属资源：${spu.name}<br/>来源平台：${distributor.name}<br/>供应商：${seller.name} <br/>${summary}",
+                      "tpl":"所属资源：${spu.name}<br/>来源平台：${distributor.name}<br/>供应商：${seller.name} <br/>产品说明：${summary}",
                     },
-                    // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数:'+extJson.days:''}",
+                    "secondary": "${price.currency}${price.sale||'--'}",
                     "actions": [
                       { 
                         "type": "button",
@@ -1038,13 +1524,36 @@ export const skuForm = {
                         "onEvent": {
                           "click": {
                             "actions": [
-                              {
-                                "actionType": "custom",
-                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
-                                  console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
-                                },
-                              },
+                              { //显示已发布链接列表
+                                "actionType": "dialog",
+                                "dialog": {
+                                  "title": "已发布列表",
+                                  "size": "sm",
+                                  "closeOnEsc": true,
+                                  "closeOnOutside": true,
+                                  "actions": [
+                                    {
+                                      "type": "button",
+                                      "label": "前往发布/上架 ${name}",
+                                      "className": "border-none text-right text-primary",
+                                      "onEvent": {
+                                        "click": {
+                                          "actions": [
+                                            {
+                                              "actionType": "custom",
+                                              "script": (context, event, props) => { 
+                                                console.log("try redirect",context, props.data);
+                                                sendRedirect(WEB_API + "/c2b/travel/my-sku?id="+props.data.id);
+                                              },
+                                            },
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "body": linkDialog
+                                }
+                              }
                             ]
                           }
                         }
@@ -1225,117 +1734,6 @@ export const kbForm = {
         "title":""
       },
       "body": [
-        // {
-        //   "type": "flex",
-        //   "className": "w-full",
-        //   "items": [
-        //     // {
-        //     //   "type": "container",
-        //     //   "body": [
-        //     //     {
-        //     //       "type": "select",
-        //     //       "label":"",
-        //     //       "placeholder": "选择分类",
-        //     //       "className":"w-full",
-        //     //       "name": "knowledgeCategoryId",
-        //     //       "source":{
-        //     //         "method": "get",
-        //     //         "url": BIZ_API+"/erp/knowledgeCategory/rootList", 
-        //     //         "adaptor": function (payload, response) {
-        //     //           //组织下拉选项options
-        //     //           var options = [];
-        //     //           payload.result.records.forEach( record => {
-        //     //             options.push({
-        //     //               label: record.name,
-        //     //               value: record.id
-        //     //             })
-        //     //           });
-        //     //           return {
-        //     //             status: payload.success ? 0 : 1,
-        //     //             msg: payload.success ? "success" : "failure",
-        //     //             data: {
-        //     //               options: options
-        //     //             },
-        //     //           };
-        //     //         },
-        //     //         ...BIZ_CONFIG,
-        //     //         "data":{}
-        //     //       },
-
-        //     //       "multiple": false
-        //     //     }
-        //     //   ],
-        //     //   "size": "xs",
-        //     // },
-        //     {
-        //       "type": "container",
-        //       "body": [
-        //         {
-        //           "type": "input-text",
-        //           "className":"w-full",
-        //           "placeholder": "关键字",
-        //           "name": "title"
-        //         }
-        //       ],
-        //       "size": "md",
-        //       "style": {
-        //         "position": "static",
-        //         "display": "block",
-        //         "flex": "1 1 auto",
-        //         "flexGrow": 1,
-        //         "flexBasis": "auto"
-        //       },
-        //       "wrapperBody": false,
-        //       "isFixedHeight": false,
-        //       "isFixedWidth": false
-        //     },
-        //     {
-        //       "type": "container",
-        //       "body": [
-        //         {
-        //           "type": "button",
-        //           "label": "搜索",
-        //           "onEvent": {
-        //             "click": {
-        //               "actions": [
-        //                 {
-        //                   "actionType": "reload", // 重新加载SPU表格，根据新的搜索条件
-        //                   "componentId": "servicekb", // 触发spu数据加载：注意需要触发service，table仅负责显示数据
-        //                   "args": { // ignore : 在SPU表格中将自动获取搜索条件
-        //                     "&": "$$"
-        //                   }
-        //                 }
-        //               ]
-        //             }
-        //           },
-        //           "size": "md",
-        //           "level": "primary"
-        //         }
-        //       ],
-        //       "size": "xs",
-        //       "style": {
-        //         "position": "static",
-        //         "display": "block",
-        //         "flex": "1 1 auto",
-        //         "flexGrow": 1,
-        //         "flexBasis": "auto"
-        //       },
-        //       "wrapperBody": false,
-        //       "isFixedHeight": false,
-        //       "isFixedWidth": false
-        //     }
-        //   ],
-        //   "style": {
-        //     "position": "static",
-        //     "flexWrap": "nowrap"
-        //   },
-        //   "direction": "row",
-        //   "justify": "space-evenly",
-        //   "alignItems": "stretch",
-        //   "id": "u:0fef52614e51",
-        //   "isFixedHeight": false,
-        //   "isFixedWidth": false
-        // },
         {
           "type": "input-group",
           "label": "",
@@ -1437,6 +1835,7 @@ export const kbForm = {
                     },
                     "body":{
                       "type":"tpl",
+                      "className": "text-xs",
                       "tpl":"${content|raw}",
                     },
                     //"secondary": "${knowledgeCategoryId_dictText}",

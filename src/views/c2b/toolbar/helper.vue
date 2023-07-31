@@ -24,7 +24,7 @@
 import Amis from "../../amis/components/Amis.vue";
 import 'amis/sdk/tinymce';
 import 'amis/sdk/rest';
-import { kbForm,solutionForm, aiForm, messageForm, settingForm } from './helper.data';
+import { kbForm,solutionForm,skuForm, aiForm, messageForm, settingForm } from './helper.data';
 import { listenPostMessage } from './helper.api';
 
 //监听post message
@@ -40,15 +40,19 @@ const tabjson = {
     "className":"sticky", //固定tab表头
     "tabs": [
       {
-        "title": "知识库",
-        "tab": kbForm
-      },
-      {
         "title": "方案库",
         "tab": solutionForm
       },
       {
-        "title": "AI助手",
+        "title": "产品库",
+        "tab": skuForm
+      },
+      {
+        "title": "知识库",
+        "tab": kbForm
+      },
+      {
+        "title": "AI生成",
         "tab": aiForm
       },
       {

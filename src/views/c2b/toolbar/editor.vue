@@ -59,8 +59,22 @@ import 'amis/sdk/rest';
 import { kbForm,solutionForm, aiForm, contentForm, skuForm, posterForm } from './editor.data';
 import { listenPostMessage } from './editor.api';
 
+// import { useUserStore } from '/@/store/modules/user';
+// const userStore = useUserStore();
+
 //监听post message
 listenPostMessage();
+
+//进入时检查用户信息，通知上层窗口
+//不能工作：导致重复加载
+// console.log("sxToolbar:helper");
+// //通知上层窗口修改登录状态
+// window.parent.postMessage({
+//     action: 'sxLogin',
+//     data: {
+//       userInfo: JSON.parse(JSON.stringify(userStore.getUserInfo)),
+//     }
+// }, '*');  
 
 const tabnode = "#itemtypes";
 const tabjson = {

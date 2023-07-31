@@ -14,6 +14,593 @@ import { DrawerAction } from 'amis-core/lib/actions/DrawerAction';
 import { useUserStore } from '/@/store/modules/user';
 const userStore = useUserStore();
 
+//显示sop列表，提供自动回复设置
+export const skuForm = {
+  "type": "page",
+  "title": "SKU",
+  "body": [
+    {
+      "type": "form",
+      "wrapWithPanel": false,
+      "className": "-m-4",
+      "data": { //数据通过page在搜索表单及数据列表间传递
+        // "itemType":"",
+        // "keyword":"",
+      },
+      "body": [
+        {
+          "type": "input-group",
+          "label": "",
+          // "className": "w-full",
+          "body": [
+            // { //存在适配问题，显示风格不正确。采用手动方式作为下拉按钮显示
+            //   "type": "select",
+            //   "label": "",
+            //   "name": "itemType",
+            //   "multiple": false,
+            //   "className": "is-pc",
+            //   "source": {
+            //     "method": "get",
+            //     "url": BIZ_API+"/sys/dict/getDictItems/stock_type", 
+            //     "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+            //     "replaceData": true,
+            //     "autoRefresh": true,
+            //     "adaptor": function (payload, response) {
+            //       console.log("got dict items", payload);
+            //       let options = payload.result;
+            //       options.splice(0,0,{
+            //         value: "",
+            //         label: "不限",
+            //       });
+            //       return {
+            //         total: payload.result && payload.result.total ? payload.result.total : 0,
+            //         msg: payload.success ? "success" : "failure",
+            //         data: options, //payload.result,
+            //         status: payload.success ? 0 : 1
+            //       };
+            //     },
+            //     ...BIZ_CONFIG,
+            //     "data":{
+            //       //"&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+            //     }
+            //   },
+            // },
+            {
+              "type": "input-text",
+              // "className":"w-full",
+              "placeholder": "关键字", 
+              "name": "keyword"
+            },
+            {
+              "type": "dropdown-button",
+              "label": "",
+              // "hideCaret": true,
+              "buttons": [
+                {
+                  "type": "button",
+                  "label": "酒店",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "hotel",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                // {
+                //   "type": "button",
+                //   "label": "机票",
+                //   "onEvent": {
+                //     "click": {
+                //       "actions": [
+                //         {
+                //           "actionType": "reload", 
+                //           "componentId": "servicesku", 
+                //           "data": { 
+                //             "itemType": "ticket",
+                //             "&":"$$"
+                //           }
+                //         }
+                //       ]
+                //     }
+                //   },
+                // },
+                {
+                  "type": "button",
+                  "label": "交通接驳",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "vehicle",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "景点门票",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "scene",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "观光日游",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "tour",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "租车/包车",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "car",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "演出赛事",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "show",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "餐饮美食",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "restaurant",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "娱乐休闲",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "leisure",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "旅行服务",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "service",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "旅游商品",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "goods",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "签证",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "visa",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+                {
+                  "type": "button",
+                  "label": "导游",
+                  "onEvent": {
+                    "click": {
+                      "actions": [
+                        {
+                          "actionType": "reload", 
+                          "componentId": "servicesku", 
+                          "data": { 
+                            "itemType": "guide",
+                            "&":"$$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                },
+
+              ]
+            },
+            {
+              "type": "button",
+              "label": "搜索",
+              "onEvent": {
+                "click": {
+                  "actions": [
+                    {
+                      "actionType": "reload", // 重新加载SKU表格，根据新的搜索条件
+                      "componentId": "servicesku", // 触发sku数据加载：注意需要触发service，table仅负责显示数据
+                      "args":{
+                        "&": "$$"
+                      }
+                    }
+                  ]
+                }
+              },
+              "size": "md",
+              "level": "primary"
+            }
+          ]
+        },
+        {
+          "type": "service",
+          "id":"servicesku",
+          "initFetch": true,
+          "className":"mb-20",
+          "api": {
+            "method": "post",
+            "url": SEARCH_API+"/sku/_search", 
+            "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+            "replaceData": true,
+            "autoRefresh": true,
+            "requestAdaptor": function (api) { //需要根据搜索条件动态组织搜索Query
+              let orgData = {...api.data}; //原有的数据，由于返回数据会装载到一起，不能直接作为搜索数据
+              let targetData = {
+                from: orgData.from,
+                size: orgData.size,
+                query: orgData.query,
+                sort: orgData.sort
+              };
+
+              //根据搜索表单的值设置搜索条件
+              if(orgData.itemType && orgData.itemType.trim().length>0){
+                targetData.query.bool.must.push({
+                  "nested": {
+                      "path": "type",
+                      "query": {
+                          "term" : { "type.item": orgData.itemType } // 指定类型搜索
+                      }
+                  }
+                });
+              }
+
+              //根据搜索表单的值设置搜索条件
+              if(orgData.keyword && orgData.keyword.trim().length>0){
+                targetData.query.bool.should.push({ "match": { "full_text": orgData.keyword } });
+              }
+
+              return {
+                ...api,
+                data: targetData //使用组装后的查询条件
+              };
+            },
+            "adaptor": function (payload, response) {
+              let records = new Array();
+              payload.hits.hits.forEach( item => {
+                records.push(item._source);
+              });
+              return {
+                total: payload.hits && payload.hits.total ? payload.hits.total : 0,
+                msg: payload.hits && payload.hits.total >0 ? "success" : "failure",
+                data: {
+                  records: records
+                },
+                status: payload.hits ? 0 : 1
+              };
+            },
+            ...SEARCH_CONFIG,
+            "data":{
+              "from":0,
+              "size":30,
+              "query": {
+                "bool" : {
+                  "must" : [
+                      {
+                        "nested": {
+                            "path": "tenant",
+                            "query": {
+                                "term" : { "tenant.id": getTenantId()?getTenantId():0 } // 仅查询私库内容
+                            }
+                        }
+                      },
+                      // {
+                      //   "nested": {
+                      //       "path": "type",
+                      //       "query": {
+                      //           "term" : { "type.item": "${itemType}" } // 根据类型查询
+                      //       }
+                      //   }
+                      // }
+                  ],
+                  "should": []
+                }
+              },
+              "sort": [
+                  { "_score":   { "order": "desc" }}
+              ],
+              "&": "$$" //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+            }
+          },
+          "body": [
+            {
+              "type": "pagination-wrapper",
+              "position": "bottom",
+              //"inputName": "rows",
+              //"outputName": "rows",
+              "perPage": 10,
+              "body": [
+                {
+                  "type": "each",
+                  "name": "records", //指定从数据域中获取用于循环的变量，即： data.records
+                  // "className": "w-full", //IMPORTANT：由于生成后多出div，手动将该div设置为flex显示
+                  "items": {
+                    "type": "card",
+                    "className": "w-full",
+                    "header": {
+                      "title": "${name}",
+                    },
+                    "media": {
+                      "type": "image",
+                      "className": "w-full h-24",
+                      "url": "${logo}",
+                      "position": "top"
+                    },
+                    "body":{
+                      "type":"tpl",
+                      "className": "text-xs",
+                      "tpl":"所属资源：${spu.name}<br/>来源平台：${distributor.name}<br/>供应商：${seller.name} <br/>产品说明：${summary}",
+                    },
+                    "secondary": "${price.currency}${price.sale||'--'}",
+                    "actions": [
+                      { 
+                        "type": "button",
+                        "label": "查看详情", //跳转到MP预览内容
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
+                                  console.log("try redirect",context, props.data);
+                                  //如果是外部商品则直接跳转
+                                  if( props.data.url ){
+                                    sendRedirect(props.data.url)
+                                  }else{ //否则进入SaaS端产品列表
+                                    sendRedirect(WEB_API + "/c2b/travel/my-sku?id="+props.data.id)
+                                  }
+                                },
+                              },
+                            ]
+                          }
+                        }
+                      },
+                    ],
+                    "toolbar": [
+                      {
+                        "type": "mapping",
+                        "label": "库存类型",
+                        "name": "type.stock",
+                        "map": {
+                          "contract": {
+                            "type": "tpl",
+                            "tpl": "自有/签约",
+                            "className": "label label-success"
+                          },
+                          "quote":{
+                            "type": "tpl",
+                            "tpl": "外采/询价",
+                            "className": "label label-warning"
+                          },
+                          "*":{
+                            "type": "tpl",
+                            "tpl": "${type.stock}",
+                            "className": "label label-danger"
+                          }
+                        }
+                      },
+                      {
+                        "type": "mapping",
+                        "label": "SKU类型",
+                        "name": "type.item",
+                        "map": {
+                          "hotel": {
+                            "type": "tpl",
+                            "tpl": "酒店",
+                            "className": "label label-danger"
+                          },
+                          "scene":{
+                            "type": "tpl",
+                            "tpl": "景点门票",
+                            "className": "label label-danger"
+                          },
+                          "visa":{
+                            "type": "tpl",
+                            "tpl": "签证",
+                            "className": "label label-danger"
+                          },
+                          "guide":{
+                            "type": "tpl",
+                            "tpl": "导游",
+                            "className": "label label-danger"
+                          },
+                          "car":{
+                            "type": "tpl",
+                            "tpl": "租车/包车",
+                            "className": "label label-danger"
+                          },
+                          "vehicle":{
+                            "type": "tpl",
+                            "tpl": "交通接驳",
+                            "className": "label label-danger"
+                          },
+                          "restaurant":{
+                            "type": "tpl",
+                            "tpl": "餐饮美食",
+                            "className": "label label-danger"
+                          },
+                          "show":{
+                            "type": "tpl",
+                            "tpl": "演出赛事",
+                            "className": "label label-danger"
+                          },
+                          "leisure":{
+                            "type": "tpl",
+                            "tpl": "城市休闲",
+                            "className": "label label-danger"
+                          },
+                          "tour":{
+                            "type": "tpl",
+                            "tpl": "观光日游",
+                            "className": "label label-danger"
+                          },
+                          "goods":{
+                            "type": "tpl",
+                            "tpl": "旅游商品",
+                            "className": "label label-danger"
+                          },
+                          "service":{
+                            "type": "tpl",
+                            "tpl": "旅行服务",
+                            "className": "label label-danger"
+                          },
+                          "*":{
+                            "type": "tpl",
+                            "tpl": "${type.item}",
+                            "className": "label label-danger"
+                          }
+                        }
+                      },
+                      
+                    ],
+                  }
+                },
+                
+              ]
+            }
+          ]
+        }
+      ],
+      "id": "formsku",
+      "wrapperBody": false,
+      // "mode": "horizontal"
+    }
+    
+  ],
+  "asideResizor": false,
+  "pullRefresh": {
+    "disabled": true
+  },
+  "asideSticky": false,
+  "regions": [
+    "body"
+  ],
+  "data": {
+  }
+};
+
 //方案库查询表单：带有搜索框，默认显示全部，搜索查询全部
 export const solutionForm = {
   "type": "page",
