@@ -17,101 +17,91 @@ const userStore = useUserStore();
 
 const glob = useGlobSetting();
 
-//业务数据API
-export const bizAPI = {
-    solution: {
-      get: '/erp/diySolution/queryById', 
-      list: '/erp/diySolution/list', 
-      save: '/erp/diySolution/add',
-      edit: '/erp/diySolution/edit',
-      delete: '/erp/diySolution/delete',
-    },
-}
+//操作界面状态数据
+export const hot = reactive({
+  corpId: "",
+  agentId: "",
+  replaceContent: true, //记录操作类型，是否需要替换当前内容，对于续写则为添加
+  currentContent: "", //记录当前生成的内容
+  product: {id: "", name: "", type: "" },
+});
 
-//调试
-export const isDebug: boolean = false;
-
-//接受知识库消息，并自动发送到对话框
-export const sendKbMsg = ( msg ) => {
-    console.log("try send kb msg", msg);
-    window.parent.postMessage({
-        action: 'sxSendMsg',
-        content: msg.content,
-    }, '*');  
-}
-
-//复制知识库消息
-export const copyKbMsg = ( msg ) => {
-  console.log("try send kb msg", msg);
-  window.parent.postMessage({
-      action: 'sxSendMsg',
-      content: msg.content,
-  }, '*');  
-}
-
-//接受AI生成内容，并自动发送到对话框
-export const sendAiMsg = ( msg ) => {
-    console.log("try send ai msg", msg);
-    window.parent.postMessage({
-        action: 'sxSendMsg',
-        content: msg.content,
-    }, '*');    
+//发送消息到对话框，具体内容由前端封装
+export const sendChatMessage = ( msg ) => {
+    console.log("try send msg", msg);
+    try{
+      let res = ww.sendChatMessage( msg )
+      console.log("msg sent.", res);
+    }catch(err){
+      console.log("error send msg.",err);
+    }
+    
 }
 
 //打开默认浏览器
 export const sendRedirect = ( url ) => {
-    console.log("try open url in new tab", url);
-    ww.openDefaultBrowser({
-      url: url,
-      success: function(res){
-        console.log("open default browser success",res);
-      },
-      fail: function(res){
-        console.log("open default browser fail",res);
-      },
-      complete: function(res){
-        console.log("open default browser complete",res);
-      },
-    })
+  console.log("try open url in new tab", url);
+  let res = ww.openDefaultBrowser({
+    url: url,
+    success: function(res){
+      console.log("open default browser success",res);
+    },
+    fail: function(res){
+      console.log("open default browser fail",res);
+    },
+    complete: function(res){
+      console.log("open default browser complete",res);
+    },
+  })
+  console.log("open default browser", res);
 }
 
-//装载sop，并通知脚本
-export const hookSop = ( sopList ) => {
-    console.log("got sop list", sopList);
-    //找到沟通sop：sop_type=customer, event_type=timeout-response
-    let sop = sopList.find( item => item.sopType=="customer" && item.eventType =="timeout-response");
-    if(sop){ //发送给脚本
-        window.parent.postMessage({ //交由脚本处理
-            action: 'sxSopCustomer',
-            sop: sop,
-        }, '*'); 
-    }else{ 
-        console.log("no customer timeout-response threshold found.");
-    }   
+
+export const registerWecom = ( corpId, agentId ) => {
+  hot.corpId = corpId;
+  hot.agentId = agentId;
+
+  ww.register({
+    corpId: hot.corpId,       // 必填，当前用户企业所属企业ID
+    agentId: hot.agentId,                  // 必填，当前第三方应用的AgentID
+    jsApiList: [
+        'getExternalContact',
+        'sendChatMessage',
+        'getContext',
+        'getCurExternalContact',
+        'getCurExternalChat',
+        'openEnterpriseChat',
+        'shareToExternalContact',
+        'shareToExternalChat',
+        'previewFile',
+        'shareToExternalMoments',
+    ], // 必填，需要使用的JSAPI列表
+    getConfigSignature,                // 必填，根据url生成企业签名的回调函数
+    getAgentConfigSignature,            // 必填，根据url生成应用签名的回调函数
+  })
 }
 
-//更新自动回复语
-export const hookAutoReply = ( content ) => {
-    console.log("got auto reply msg", content);
-    localStorage.setItem("sxAutoReply",content);
+async function getConfigSignature() {
+  // 根据 url 生成企业签名
+  // 生成方法参考 https://open.work.weixin.qq.com/api/doc/90001/90144/93197
+  let corpId = hot.corpId;
+  let url = window.location.href;
+  console.log("generate corp auth signature", corpId, url);
+  let signature = await getCorpJsConf(corpId, url); 
+  console.log("got corp auth signature", signature);
+  return signature;
 }
 
-//查询工具条状态，包括工具条设置及用户登录信息
-export const checkToolbarStatus = ()=>{
-  if(isDebug)console.log("try to check toolbar status..."); 
-  var sxToolbarStatus = {};
-  try{
-    sxToolbarStatus = JSON.parse(localStorage.getItem('sxToolbarStatus') );
-  }catch(err){}
-  if(isDebug)console.log("try to post toolbar  status to parent document.",sxToolbarStatus);   
-  window.parent.postMessage({
-    action:'sxToolbarStatus',
-    data:{
-        toolbarStatus: sxToolbarStatus,
-        userInfo: userStore.getUserInfo
-    }
-  }, '*');    
+async function getAgentConfigSignature() {
+  // 根据 url 生成应用签名，生成方法同上，但需要使用应用的 jsapi_ticket
+  let corpId = hot.corpId;
+  let url = window.location.href;
+  console.log("generate corp auth signature", corpId, url);
+  let signature = await getSuiteJsConf(corpId, url); 
+  console.log("got suite auth signature", signature);
+  return signature;
 }
+
 
 //生成企业js签名
 export const getCorpJsConf = async (corpId, url) => {
@@ -159,6 +149,86 @@ export const getSuiteJsConf = async (corpId, url) => {
     //** */
     console.log("suite auth signature created",res.data);
     return res.data.data;
+}
+
+
+//业务数据API
+export const bizAPI = {
+    solution: {
+      get: '/erp/diySolution/queryById', 
+      list: '/erp/diySolution/list', 
+      save: '/erp/diySolution/add',
+      edit: '/erp/diySolution/edit',
+      delete: '/erp/diySolution/delete',
+    },
+}
+
+//调试
+export const isDebug: boolean = false;
+
+//接受知识库消息，并自动发送到对话框
+export const sendKbMsg = ( msg ) => {
+    console.log("try send kb msg", msg);
+    window.parent.postMessage({
+        action: 'sxSendMsg',
+        content: msg.content,
+    }, '*');  
+}
+
+//复制知识库消息
+export const copyKbMsg = ( msg ) => {
+  console.log("try send kb msg", msg);
+  window.parent.postMessage({
+      action: 'sxSendMsg',
+      content: msg.content,
+  }, '*');  
+}
+
+//接受AI生成内容，并自动发送到对话框
+export const sendAiMsg = ( msg ) => {
+    console.log("try send ai msg", msg);
+    window.parent.postMessage({
+        action: 'sxSendMsg',
+        content: msg.content,
+    }, '*');    
+}
+
+//装载sop，并通知脚本
+export const hookSop = ( sopList ) => {
+    console.log("got sop list", sopList);
+    //找到沟通sop：sop_type=customer, event_type=timeout-response
+    let sop = sopList.find( item => item.sopType=="customer" && item.eventType =="timeout-response");
+    if(sop){ //发送给脚本
+        window.parent.postMessage({ //交由脚本处理
+            action: 'sxSopCustomer',
+            sop: sop,
+        }, '*'); 
+    }else{ 
+        console.log("no customer timeout-response threshold found.");
+    }   
+}
+
+//更新自动回复语
+export const hookAutoReply = ( content ) => {
+    console.log("got auto reply msg", content);
+    localStorage.setItem("sxAutoReply",content);
+}
+
+//查询工具条状态，包括工具条设置及用户登录信息
+export const checkToolbarStatus = ()=>{
+  if(isDebug)console.log("try to check toolbar status..."); 
+  var sxToolbarStatus = {};
+  try{
+    sxToolbarStatus = JSON.parse(localStorage.getItem('sxToolbarStatus') );
+  }catch(err){}
+  if(isDebug)console.log("try to post toolbar  status to parent document.",sxToolbarStatus);   
+  window.parent.postMessage({
+    action:'sxToolbarStatus',
+    data:{
+        toolbarStatus: sxToolbarStatus,
+        userInfo: userStore.getUserInfo
+    }
+  }, '*');    
 }
 
 //发送webhook通知

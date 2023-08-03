@@ -26,18 +26,24 @@ export const hot = reactive({
 });
 
 export const sidebarName = {
+  all: "More+",
   solution: "方案库",
   kb:"知识库",
   ai:"AI生成",
   note:"笔记库",
   product: "产品库",
+  content: "图文",
+  poster: "海报",
 };
 export const sidebarDesc = {
+  all: "显示方案、产品、笔记、图文、海报、AI生成、知识库等所有可用资源列表",
   solution: "显示所有定制方案列表，能够直接发送图文到聊天对话框",
   kb:"显示知识库内容，支持搜索，能够快速发送到聊天对话框",
   ai:"支持AI自动生成，能够根据客户问答快速生成回复，并且支持发送到聊天对话框",
   note:"显示所有笔记内容，能够直接发送给客户或客户群，支持客户编辑内容",
   product: "显示自有产品列表，能够发送到聊天对话框，方便快速回复客户。支持下单链接及二维码。",
+  conntent: "显示已生成图文列表，能够直接推送推文卡片",
+  poster: "显示已生成海报列表，能够直接发送到群聊",
 };
 export const sidebarOauthUrl = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=__SUITE_ID&agentid=__AGENT_ID&redirect_uri=__URI&response_type=code&scope=snsapi_base&state=__STATE#wechat_redirect";
 export const sidebarUrl = WEB_API+"/c2b/toolbar/sidebar?tab=__TYPE&corpId=__CORPID&agentId=__AGENTID" ;//https%3A//air.biglistoflittlethings.com/c2b/toolbar/sidebar%3Ftab%3Dsolution
