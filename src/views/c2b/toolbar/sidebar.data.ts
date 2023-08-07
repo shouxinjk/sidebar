@@ -161,6 +161,30 @@ export const solutionForm = {
                           }
                         }
                       },
+                      { 
+                        "type": "button",
+                        "label": "发送摘要",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try send msg ....", event.data);
+                                  sendChatMessage({
+                                    enterChat: true,
+                                    msgtype: 'text',
+                                    text: {
+                                      content: event.data.description || event.data.name
+                                    }
+                                  })
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
                       // { 
                       //   "type": "button",
                       //   "label": "发送图文", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
@@ -456,6 +480,30 @@ export const noteForm = {
                       },
                       { 
                         "type": "button",
+                        "label": "发送摘要",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try send msg ....", event.data);
+                                  sendChatMessage({
+                                    enterChat: true,
+                                    msgtype: 'text',
+                                    text: {
+                                      content: event.data.description || event.data.name
+                                    }
+                                  })
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+                      { 
+                        "type": "button",
                         "label": "发送卡片", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
@@ -470,6 +518,7 @@ export const noteForm = {
                                     let miniprogInfo = hot.authMiniprogs[0];
                                     //发送内容到对话框
                                     sendChatMessage({
+                                      enterChat: true,
                                       msgtype: 'miniprogram',
                                       miniprogram: {
                                         appid: miniprogInfo.authorizerAppid,//小程序的appid
@@ -678,7 +727,7 @@ export const posterForm = {
                     "actions": [
                       { 
                         "type": "button",
-                        "label": "查看大图", //跳转到MP预览内容
+                        "label": "预览", //跳转到MP预览内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
@@ -694,9 +743,39 @@ export const posterForm = {
                           }
                         }
                       },
+                      { 
+                        "type": "button",
+                        "label": "发送摘要",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try send msg ....", event.data);
+                                  //获取对应的item详情
+                                  getItemInfo(event.data.itemType, event.data.itemId).then( res => {
+                                    let itemInfo = res.data.result;
+                                    console.log("got item info", itemInfo);
+                                    sendChatMessage({
+                                      enterChat: true,
+                                      msgtype: 'text',
+                                      text: {
+                                        content: itemInfo.description || itemInfo.name
+                                      }
+                                    })
+                                  });
+                                  
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
                       { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
                         "type": "button",
-                        "label": "发送到聊天",
+                        "label": "发送图片",
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
@@ -918,9 +997,39 @@ export const contentForm = {
                           }
                         }
                       },
+                      { 
+                        "type": "button",
+                        "label": "发送摘要",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try send msg ....", event.data);
+                                  //获取对应的item详情
+                                  getItemInfo(event.data.itemType, event.data.itemId).then( res => {
+                                    let itemInfo = res.data.result;
+                                    console.log("got item info", itemInfo);
+                                    sendChatMessage({
+                                      enterChat: true,
+                                      msgtype: 'text',
+                                      text: {
+                                        content: itemInfo.description || itemInfo.name
+                                      }
+                                    })
+                                  });
+                                  
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
                       { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
                         "type": "button",
-                        "label": "发送到聊天",
+                        "label": "发送图文",
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
@@ -1448,6 +1557,30 @@ export const skuForm = {
                                     sendRedirect(WEB_API + "/c2b/travel/my-sku?id="+props.data.id)
                                   }
                                 },
+                              },
+                            ]
+                          }
+                        }
+                      },
+                      { 
+                        "type": "button",
+                        "label": "发送摘要",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try send msg ....", event.data);
+                                  sendChatMessage({
+                                    enterChat: true,
+                                    msgtype: 'text',
+                                    text: {
+                                      content: event.data.description || event.data.summary || event.data.name
+                                    }
+                                  })
+                                }
                               },
                             ]
                           }
