@@ -4,7 +4,7 @@ import {Md5} from 'ts-md5';
 import { getTenantId, getToken } from "/@/utils/auth";
 import { getTenantById } from '/@/views/system/tenant/tenant.api';
 import { router } from '/@/router';
-import {SEARCH_API, SEARCH_CONFIG, BIZ_CONFIG, WEWORK_API, SUITE_ID} from '/@/settings/iLifeSetting';
+import {SEARCH_API, SEARCH_CONFIG, BIZ_CONFIG, WEWORK_API, SUITE_ID, BIZ_API} from '/@/settings/iLifeSetting';
 import { useGlobSetting } from '/@/hooks/setting';
 import { timestamp } from '@vueuse/shared';
 import { reactive } from 'vue';
@@ -19,6 +19,7 @@ const glob = useGlobSetting();
 
 //操作界面状态数据
 export const hot = reactive({
+  authMiniprogs: [], //当前租户小程序信息，用于构建小程序卡片
   corpId: "",
   agentId: "",
   replaceContent: true, //记录操作类型，是否需要替换当前内容，对于续写则为添加
@@ -26,22 +27,82 @@ export const hot = reactive({
   product: {id: "", name: "", type: "" },
 });
 
+//加载授权小程序，可能为多个
+export const loadAuthMiniprogs = ( ) => {
+  console.log("try load auth miniprog");
+  //加载solution
+  axios
+    .get( BIZ_API+"/erp/wxAuthMiniprog/list",{...BIZ_CONFIG,
+      params:{}
+    })
+    .then(res => { 
+      console.log("got miniprogs.",res);
+      hot.authMiniprogs = res.data.result.records;
+    })
+    .catch(function (error) { 
+      console.log("failed load auth miniprogs",error);
+    });
+}
+
+//获取sku详情
+export const getSku = async (id) => {
+  return axios
+  .get(SEARCH_API+'/sku/doc/'+id, SEARCH_CONFIG);
+}
+
+//根据itemType及itemId查询得到详情，组装展示信息
+export const getItemInfo = async ( itemType, itemId ) => {
+  console.log("try get item info", itemType, itemId);
+  if( itemType === "solution"){
+    return axios
+    .get( BIZ_API+"/erp/diySolution/queryById",{...BIZ_CONFIG,
+      params:{
+        id: itemId
+      }
+    });
+  }else if( itemType === "note"){
+    return axios
+    .get( BIZ_API+"/erp/diySolutionNote/queryById",{...BIZ_CONFIG,
+      params:{
+        id: itemId
+      }
+    });
+  }else if( itemType === "sku"){
+    return axios
+    .get( BIZ_API+"/erp/diySpecificItem/queryById",{...BIZ_CONFIG,
+      params:{
+        id: itemId
+      }
+    });
+  }else{
+    console.log("wrong itemType", itemType);
+    return "error itemType"
+  }
+
+}
+
+//上传临时素材：得到mediaId
+export const uploadMedia = async ( mediaInfo ) => {
+  console.log("try upload media",mediaInfo);
+  //上传
+  return axios
+    .post( BIZ_API+"/wework/tp/upload-media",mediaInfo,BIZ_CONFIG);
+}
+
 //发送消息到对话框，具体内容由前端封装
 export const sendChatMessage = ( msg ) => {
     console.log("try send msg", msg);
-    try{
-      let res = ww.sendChatMessage( msg )
+    ww.sendChatMessage( msg ).then( res => {
       console.log("msg sent.", res);
-    }catch(err){
-      console.log("error send msg.",err);
-    }
-    
+    }).catch(function (error) { 
+      console.log("send msg error",error);
+    });
 }
 
 //打开默认浏览器
 export const sendRedirect = ( url ) => {
   console.log("try open url in new tab", url);
-  let res = ww.openDefaultBrowser({
+  ww.openDefaultBrowser({
     url: url,
     success: function(res){
       console.log("open default browser success",res);
@@ -52,8 +113,11 @@ export const sendRedirect = ( url ) => {
     complete: function(res){
       console.log("open default browser complete",res);
     },
-  })
-  console.log("open default browser", res);
+  }).then( res => {
+    console.log("opend default browser done.", res);
+  }).catch(function (error) { 
+    console.log("send msg error",error);
+  });
 }
 
 
@@ -78,7 +142,7 @@ export const registerWecom = ( corpId, agentId ) => {
     ], // 必填，需要使用的JSAPI列表
     getConfigSignature,                // 必填，根据url生成企业签名的回调函数
     getAgentConfigSignature,            // 必填，根据url生成应用签名的回调函数
-  })
+  });
 }
 
 async function getConfigSignature() {

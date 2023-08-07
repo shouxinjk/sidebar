@@ -5,7 +5,7 @@ import {Md5} from 'ts-md5';
 import {SEARCH_API, SEARCH_CONFIG, BIZ_API, BIZ_CONFIG, WEB_API, MP_API } from '/@/settings/iLifeSetting';
 import { getTenantId } from '/@/utils/auth';
 
-import {  isDebug,bizAPI, sendAiMsg, sendKbMsg, copyToClipboard, sendRedirect, hookSop, hookAutoReply, hot, sendChatMessage } from './sidebar.api';
+import {  isDebug,bizAPI, sendAiMsg, sendKbMsg, copyToClipboard, sendRedirect, hookSop, hookAutoReply, hot, sendChatMessage, getSku, getItemInfo, uploadMedia } from './sidebar.api';
 import { DollarCircleTwoTone } from '@ant-design/icons-vue';
 
 import {ToastComponent, AlertComponent, alert, confirm, toast,Drawer} from 'amis-ui';
@@ -221,29 +221,41 @@ export const solutionForm = {
                         "label": "发送卡片", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
-                          "rowClick": {
+                          "click": {
                             "actions": [         
                               {
                                 "actionType": "custom",
                                 "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
                                   console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.rowItem.id)
+                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
                                 },
                               },
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => {
-                                  console.log("try send solution card....",context, props.data);
-                                  //发送内容到对话框
-                                  sendChatMessage({
-                                    msgtype: 'miniprogram',
-                                    miniprogram: {
-                                      appid: "wx099102889bea2294",//小程序的appid
-                                      title: props.data.rowItem.name, //小程序消息的title
-                                      imgUrl:props.data.rowItem.logo,//小程序消息的封面图
-                                      page:"/modules/solution/pages/detail/index.html?id="+props.data.rowItem.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
-                                    },
-                                  })
+                                "script": (context, doAction, event) => {
+                                  console.log("try send solution card....",context, event.data);
+                                  //获取授权小程序信息
+                                  if (hot.authMiniprogs.length>0 ) {
+                                    let miniprogInfo = hot.authMiniprogs[0];
+                                    //发送内容到对话框
+                                    sendChatMessage({
+                                      msgtype: 'miniprogram',
+                                      miniprogram: {
+                                        appid: miniprogInfo.authorizerAppid,//小程序的appid
+                                        title: event.data.name, //小程序消息的title
+                                        imgUrl:event.data.logo,//小程序消息的封面图
+                                        page:"/modules/solution/pages/detail/index.html?id="+event.data.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
+                                      },
+                                    })
+                                  }else{
+                                    doAction({
+                                      "actionType": "toast", // 执行toast提示动作
+                                      "args": { // 动作参数
+                                        "msgType": "error",
+                                        "msg": "无授权小程序，请通知管理员关联设置"
+                                      }
+                                    });
+                                  }
                                 }
                               },
                             ]
@@ -447,22 +459,34 @@ export const noteForm = {
                         "label": "发送卡片", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
-                          "rowClick": {
+                          "click": {
                             "actions": [         
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => {
-                                  console.log("try send solution card....",context, props.data);
-                                  //发送内容到对话框
-                                  sendChatMessage({
-                                    msgtype: 'miniprogram',
-                                    miniprogram: {
-                                      appid: "wx099102889bea2294",//小程序的appid
-                                      title: props.data.rowItem.name, //小程序消息的title
-                                      imgUrl:props.data.rowItem.logo,//小程序消息的封面图
-                                      page:"/modules/note/pages/detail/index.html?id="+props.data.rowItem.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
-                                    },
-                                  })
+                                "script": (context, doAction, event) => {
+                                  console.log("try send solution card....",context, event.data);
+                                  //获取授权小程序信息
+                                  if( hot.authMiniprogs.length>0 ){
+                                    let miniprogInfo = hot.authMiniprogs[0];
+                                    //发送内容到对话框
+                                    sendChatMessage({
+                                      msgtype: 'miniprogram',
+                                      miniprogram: {
+                                        appid: miniprogInfo.authorizerAppid,//小程序的appid
+                                        title: event.data.name, //小程序消息的title
+                                        imgUrl:event.data.logo,//小程序消息的封面图
+                                        page:"/modules/note/pages/detail/index.html?id="+event.data.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
+                                      },
+                                    })
+                                  }else{
+                                    doAction({
+                                      "actionType": "toast", // 执行toast提示动作
+                                      "args": { // 动作参数
+                                        "msgType": "error",
+                                        "msg": "无授权小程序，请通知管理员关联设置"
+                                      }
+                                    });
+                                  }
                                 }
                               },
                             ]
@@ -681,13 +705,20 @@ export const posterForm = {
                                 "actionType": "custom",
                                 "script": function(context,doAction,event){
                                   console.log("try send msg ....", event.data);
-                                  //发送内容到对话框
-                                  sendChatMessage({
-                                    msgtype: 'image',
-                                    image: {
-                                      imgUrl: event.data.url
-                                    }
-                                  })
+                                  //上传临时素材
+                                  uploadMedia({
+                                    url: event.data.url, //将logo上传为media
+                                    mediaType: "image", //固定为image类型
+                                  }).then( res => {
+                                    //发送内容到对话框
+                                    sendChatMessage({
+                                      msgtype: 'image',
+                                      image: {
+                                        "mediaid": res.data.mediaId,
+                                      }
+                                    });
+                                  });
+                                  
                                 }
                               },
                             ]
@@ -896,22 +927,24 @@ export const contentForm = {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": function(context,doAction,props){
-                                  console.log("try send msg ....", props.data);
-                                  sendChatMessage({
-                                    msgtype:"text", //消息类型，必填
-                                    enterChat: true, //为true时表示发送完成之后顺便进入会话，仅移动端3.1.10及以上版本支持该字段
-                                    text: {
-                                      content: props.data.title, //文本内容
-                                    }
+                                "script": function(context,doAction,event){
+                                  console.log("try send msg ....", event.data);
+                                  //获取对应的item详情
+                                  getItemInfo(event.data.itemType, event.data.itemId).then( res => {
+                                    let itemInfo = res.data.result;
+                                    console.log("got item info", itemInfo);
+                                    sendChatMessage({
+                                      msgtype:"news", //消息类型，必填
+                                      enterChat: true, //为true时表示发送完成之后顺便进入会话，仅移动端3.1.10及以上版本支持该字段
+                                      news: {
+                                        title: event.data.title, //文本内容
+                                        desc: itemInfo.description || itemInfo.tags || "进入查看图文详情", //描述
+                                        imgUrl: itemInfo.logo || "https://www.biglistoflittlethings.com/ilife-web-wx/images/avatar/default.jpg", //LOGO
+                                        link: event.data.url, //url
+                                      }
+                                    });
                                   });
-                                  //发送内容到对话框
-                                  // sendChatMessage({
-                                  //   msgtype: 'text',
-                                  //   text: {
-                                  //     content: props.data.title
-                                  //   }
-                                  // })
+                                  
                                 }
                               },
                             ]
@@ -1470,17 +1503,35 @@ export const skuForm = {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": function(context, doAction, props){
-                                  console.log("try send msg ....", props.data);
-                                  sendChatMessage({
-                                    msgtype: 'miniprogram',
-                                    miniprogram: {
-                                      appid: "wx099102889bea2294",//小程序的appid
-                                      title: "测试小程序卡片", //小程序消息的title
-                                      imgUrl:"https://ak-d.tripcdn.com/images/0105e120009mvqe7z9E35_C_800_600_R5.jpg_.webp?proc=autoorient",//小程序消息的封面图
-                                      page:"/modules/spu/pages/detail/index.html?id="+props.data.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
-                                    },
-                                  })
+                                "script": function(context, doAction, event){
+                                  console.log("try send msg ....", event.data);
+                                  //获取授权小程序信息
+                                  if( hot.authMiniprogs.length>0 ){ //有小程序授权才发送
+                                    let miniprogInfo = hot.authMiniprogs[0];
+                                    getSku( event.data.id ).then( res => {
+                                      console.log("got sku info.", res);
+                                      //发送内容到对话框
+                                      sendChatMessage({
+                                        msgtype: 'miniprogram',
+                                        miniprogram: {
+                                          appid: miniprogInfo.authorizerAppid,//小程序的appid
+                                          title: res.data._source.name, //小程序消息的title
+                                          imgUrl: res.data._source.logo,//小程序消息的封面图
+                                          page:"/modules/spu/pages/detail/index.html?id="+res.data._source.id, //小程序消息打开后的路径，注意要以.html作为后缀，否则在微信端打开会提示找不到页面
+                                        },
+                                      })
+                                    });
+                                    
+                                  }else{
+                                    doAction({
+                                      "actionType": "toast", // 执行toast提示动作
+                                      "args": { // 动作参数
+                                        "msgType": "error",
+                                        "msg": "无授权小程序，请通知管理员关联设置"
+                                      }
+                                    });
+                                  }
+                                  
                                 }
                               },
                             ]
@@ -1734,6 +1785,25 @@ export const kbForm = {
                     },
                     //"secondary": "${knowledgeCategoryId_dictText}",
                     "actions": [
+                      { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
+                        "type": "button",
+                        "label": "复制内容",
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(e){
+                                  console.log("try copy kb ....", e.props.data);
+                                  //copyKbMsg(e.props.data)
+                                  copyToClipboard("text/html", e.props.data.content);
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
                       { // 发送到聊天
                         "type": "button",
                         "label": "发送到聊天",
@@ -1748,28 +1818,9 @@ export const kbForm = {
                                   sendChatMessage({
                                     msgtype: 'text',
                                     text: {
-                                      content: props.data.content.replace(/<[^>]+>/g,"")
+                                      content: props.data.content.replace(/<[^>]+>/g,"").replace(/&nbsp;/g,"")
                                     }
                                   })
-                                }
-                              },
-                            ]
-                          }
-                        }
-                      },
-                      { //TODO：需要增加ajax行为：点击后将选定内容添加到行程，并且提交后端，完成后添加到行程列表
-                        "type": "button",
-                        "label": "复制内容",
-                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
-                        "onEvent": {
-                          "click": {
-                            "actions": [
-                              {
-                                "actionType": "custom",
-                                "script": function(e){
-                                  console.log("try copy kb ....", e.props.data);
-                                  //copyKbMsg(e.props.data)
-                                  copyToClipboard("text/html", e.props.data.content);
                                 }
                               },
                             ]

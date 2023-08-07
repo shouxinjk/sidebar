@@ -25,13 +25,29 @@
 
   /**修正卡片标题自动换行 */
   div.cxd-Card-title {
-    white-space: wrap !important;
+    white-space: normal !important;
     word-break: break-all;
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
+  .cxd-Transfer .cxd-Tree{
+    margin-top: 0 !important;
+  }
+  div.cxd-Each{
+    display:flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    justify-items: center !important;
+    align-items: center !important;
+  }
+
+  div.cxd-Each .cxd-Form-item {
+    margin-bottom: 0 !important;
+  }
+
 </style>
 
 <script setup lang="ts">
@@ -40,13 +56,16 @@ import 'amis/sdk/tinymce';
 import 'amis/sdk/rest';
 import { getUrlParam } from '/@/utils';
 import { kbForm,solutionForm, aiForm, contentForm, skuForm, noteForm, posterForm } from './sidebar.data';
-import { listenPostMessage, registerWecom } from './sidebar.api';
+import { listenPostMessage, loadAuthMiniprogs, registerWecom } from './sidebar.api';
 
 console.log("corpId",getUrlParam("corpId"));
 console.log("agentId",getUrlParam("agentId"));
 
 //准备wecom jssdk
 registerWecom( getUrlParam("corpId"), getUrlParam("agentId") );
+
+//装载已授权小程序
+loadAuthMiniprogs();
 
 //监听post message
 listenPostMessage();
