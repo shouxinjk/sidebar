@@ -138,6 +138,7 @@ export const registerWecom = ( corpId, agentId ) => {
         'shareToExternalContact',
         'shareToExternalChat',
         'previewFile',
+        'openDefaultBrowser',
         'shareToExternalMoments',
     ], // 必填，需要使用的JSAPI列表
     getConfigSignature,                // 必填，根据url生成企业签名的回调函数
