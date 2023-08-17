@@ -2,10 +2,10 @@ import {BasicColumn} from '/@/components/Table';
 import {FormSchema} from '/@/components/Table';
 import {Md5} from 'ts-md5';
 
-import {SEARCH_API, SEARCH_CONFIG, BIZ_API, BIZ_CONFIG, WEB_API, MP_API } from '/@/settings/iLifeSetting';
+import {SEARCH_API, SEARCH_CONFIG, BIZ_API, BIZ_CONFIG, WEB_API, MP_API, WWW_API } from '/@/settings/iLifeSetting';
 import { getTenantId } from '/@/utils/auth';
 
-import {  isDebug,bizAPI, sendAiMsg, sendKbMsg, copyToClipboard, sendRedirect, hookSop, hookAutoReply, sendGenContent, copyGenContent, openConentLink, hot, appendText, replaceText, copyGenPoster, sendImageMsg } from './editor.api';
+import {  isDebug,bizAPI, sendAiMsg, sendKbMsg, copyToClipboard, sendRedirect, hookSop, hookAutoReply, sendGenContent, copyGenContent, openConentLink, hot, appendText, replaceText, copyGenPoster, sendImageMsg, uploadImageByUrl } from './editor.api';
 import { DollarCircleTwoTone } from '@ant-design/icons-vue';
 
 import {ToastComponent, AlertComponent, alert, confirm, toast,Drawer} from 'amis-ui';
@@ -13,26 +13,25 @@ import { DrawerAction } from 'amis-core/lib/actions/DrawerAction';
 
 import { useUserStore } from '/@/store/modules/user';
 import { addPublishRecord, getPublishUrls } from '../travel/publish.api';
+import { log } from 'console';
 const userStore = useUserStore();
 
 
-//已发布链接弹框：能够从已发布的多个链接中选择
-//默认是一个service，能够根据选中的商品或方案查询发布记录得到
-export const linkDialog = {
+//小程序弹框：显示小程序二维码及小程序卡片两个条目，其中小程序卡片仅对公众号图文有效
+export const miniprogDialog = {
   "type": "service",
   "id":"linkservice",
-  "className":"mb-20",
+  // "className":"mb-20",
   "initFetch": true,
   "api": {
     "method": "get",
-    "url": BIZ_API+"/erp/diyPublishProduct/list", 
+    "url": BIZ_API+"/erp/diyPublishProduct/full-publish-info",  //TODO 后端直接组织得到完整的发布记录，包括发布平台、短连接、二维码/小程序码地址
     "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
     "replaceData": true,
     "autoRefresh": true,
     "requestAdaptor": function (api) { // 把当前触发条目作为hot，一并放入返回结果列表
       let orgData = {...api.data}; 
       console.log("got api data", orgData);
-      
       console.log("get hot product.", hot.product);
       let targetData = {
         itemType: hot.product.type,
@@ -47,39 +46,21 @@ export const linkDialog = {
       return payload;
     },
     "adaptor": function (payload, response) {
-      //如果publishRecords为空，则自动补全平台默认发布，包括ilife及miniprog两个
-      let pubRecords = new Array();
-      if(payload.result.records.length ===0){
-        pubRecords.push({
-          platformSourceId: "ilife",
-          itemType: hot.product.type,
-          itemId: hot.product.id,
-          itemName: hot.product.name,
-          publishUrl: WEB_API+"/ilife-web/"+hot.product.type+".html?id="+hot.product.id, //链接到web端
-        });
-        pubRecords.push({
-          platformSourceId: "miniprog",
-          itemType: hot.product.type,
-          itemId: hot.product.id,
-          itemName: hot.product.name,
-          publishUrl: WEB_API+"/ilife-web/"+hot.product.type+".html?id="+hot.product.id, //链接到web端
-        });
-
-        pubRecords.forEach( item => {
-          //console.log("add auto publish record.", item);
-          let publish_ilife = addPublishRecord( item );
-        });
-        
-      }else{
-        pubRecords = payload.result.records;
+      console.log("got full publish info. ", payload);
+      //仅过滤显示小程序二维码，
+      let links = new Array();
+      let miniprogQrcode = payload.find( item => item.platformSource.platform === 'miniprog' && ( ( item.appId && item.appId.trim().length>0 ) || ( item.miniprogAppId && item.miniprogAppId.trim().length>0 ) ));
+      if( miniprogQrcode ){
+        links.push(miniprogQrcode); //加入小程序码图片
+        //手动组装小程序卡片
+        let miniprogCard = { ...miniprogQrcode }; //默认采用小程序二维码信息
+        miniprogCard.qrcodeUrl = "https://www.biglistoflittlethings.com/static/logo/distributor/miniprog.png";//设置为默认图标
+        miniprogCard.actionType = "card"; //提示组装卡片html  
+        links.push(miniprogCard); //加入小程序卡片
       }
 
-      //获取platform信息及已发布url、二维码信息
-      let links = getPublishUrls( pubRecords );
-      console.log("got links. ", links);
-
       return {
-        total: payload.result.total,
+        total: links.length,
         msg: "",
         data: {
           links: links
@@ -89,10 +70,6 @@ export const linkDialog = {
     },
     ...BIZ_CONFIG,
     "data":{
-      pageNo: 1,
-      pageSize: 20,
-      itemId: "${id}", //根据itemId精准匹配
-      itemName: "${name}",
       // "&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
     }
   },
@@ -110,13 +87,453 @@ export const linkDialog = {
       "media": {
         "type": "image",
         "className": "h-24 w-24",
-        "url": "https://www.biglistoflittlethings.com/static/logo/distributor/${platform}.png",
+        "url": "${qrcodeUrl || miniprogLogo || 'https://www.biglistoflittlethings.com/static/logo/distributor/'+platformSource.platform+'.png'}",
         "position": "left"
       },
       "body":{
         "type":"tpl",
         "className": "text-xs",
-        "tpl":"发布平台：${platformSourceId_dictText} <br/>发布时间：${createTime}",
+        "tpl":"发布平台：${ miniprogName || platformSource.name} <br/>发布时间：${DATETOSTR(createTime)}",
+      },
+      // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数：'+extJson.days:''}",
+      "actions": [
+        { 
+          "type": "button",
+          "label": "添加到正文", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": function(context,doAction,event){
+                    console.log("try copy poster url", context, event.data);
+                    let url = event.data.qrcodeUrl;
+                    //判断是小程序码还是卡片
+                    if( event.data.actionType === "card"){
+                      //构建小程序卡片html片段
+                      //文字跳转小程序：
+                      let htmlText = `<p>
+                                <a data-miniprogram-appid="__miniprogAppId" 
+                                  data-miniprogram-path="modules/__itemType/pages/detail/index?id=__itemId" 
+                                  href="">__itemName</a>
+                              </p>`;
+                      //图片跳转小程序
+                      let htmlImage = `<p>
+                                <a data-miniprogram-appid="__miniprogAppId" 
+                                  data-miniprogram-path="modules/__itemType/pages/detail/index?id=__itemId" 
+                                  href="">
+                                    <img src="__itemLogo" alt="" data-width="null" data-ratio="NaN">
+                                </a>
+                              </p>`;
+                      //卡片跳转小程序：需要认证订阅号、服务号，能够上传图片素材。
+                      let htmlCard = `<mp-miniprogram 
+                              data-miniprogram-appid="__miniprogAppId" 
+                              data-miniprogram-path="modules/__itemType/pages/detail/index?id=__itemId" 
+                              data-miniprogram-title="__itemName" 
+                              data-miniprogram-imageurl="__itemLogo">
+                            </mp-miniprogram>`;
+
+                      //发送小程序卡片时需要将图片上传到公众号素材
+                      uploadImageByUrl( event.data.logo ).then( res => {
+                        console.log("got upload result", res);
+                        let html = htmlCard.replace(/__miniprogAppId/g, event.data.miniprogAppId)
+                                          .replace(/__itemType/g, event.data.itemType)
+                                          .replace(/__itemId/g, event.data.id)
+                                          .replace(/__itemName/g, event.data.name)
+                                          .replace(/__itemLogo/g, res.url);
+                        appendText( {
+                          content: html
+                        } );
+                      });
+                    }else{ //插入小程序码图片
+                      appendText( {
+                        content: "<img src='"+ url +"' />"
+                      } );
+                    }
+                    
+                  }
+                },
+                {
+                  "actionType": "toast", // 执行toast提示动作
+                  "args": { // 动作参数
+                    "msgType": "success",
+                    "msg": "已添加到正文"
+                  }
+                },
+              ]
+            }
+          }
+        },
+        { 
+          "type": "button",
+          "label": "复制到剪贴板",
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": function(context,doAction,event){
+                    console.log("try copy link", context, event.data);
+                    let url = event.data.qrcodeUrl;
+                    //判断是小程序码还是卡片
+                    if( event.data.actionType === "card"){
+                      //构建小程序卡片html片段
+                      //文字跳转小程序：
+                      let htmlText = `<p>
+                                <a data-miniprogram-appid="__miniprogAppId" 
+                                  data-miniprogram-path="modules/__itemType/pages/detail/index?id=__itemId" 
+                                  href="">__itemName</a>
+                              </p>`;
+                      //图片跳转小程序
+                      let htmlImage = `<p>
+                                <a data-miniprogram-appid="__miniprogAppId" 
+                                  data-miniprogram-path="modules/__itemType/pages/detail/index?id=__itemId" 
+                                  href="">
+                                    <img src="__itemLogo" alt="" data-width="null" data-ratio="NaN">
+                                </a>
+                              </p>`;
+                      //卡片跳转小程序：需要认证订阅号、服务号，能够上传图片素材。
+                      let htmlCard = `<mp-miniprogram 
+                              data-miniprogram-appid="__miniprogAppId" 
+                              data-miniprogram-path="modules/__itemType/pages/detail/index?id=__itemId" 
+                              data-miniprogram-title="__itemName" 
+                              data-miniprogram-imageurl="__itemLogo">
+                            </mp-miniprogram>`;
+                      
+                      //发送小程序卡片时需要将图片上传到公众号素材
+                      uploadImageByUrl( event.data.logo ).then( res => {
+                        console.log("got upload result", res);
+                        let html = htmlCard.replace(/__miniprogAppId/g, event.data.miniprogAppId)
+                                          .replace(/__itemType/g, event.data.itemType)
+                                          .replace(/__itemId/g, event.data.id)
+                                          .replace(/__itemName/g, event.data.name)
+                                          .replace(/__itemLogo/g, res.url);
+                        copyToClipboard("text/html", html);
+                      });
+                      
+                    }else{ //插入小程序码图片
+                      copyToClipboard("text/html", "<img src='"+ url +"'/>");
+                    }
+                  }
+                },
+                {
+                  "actionType": "toast", // 执行toast提示动作
+                  "args": { // 动作参数
+                    "msgType": "success",
+                    "msg": "已复制到剪贴板，可直接粘贴"
+                  }
+                },
+              ]
+            }
+          }
+        },
+      ],
+      "toolbar": [
+        // {
+        //   "type": "tpl",
+        //   "tpl": "${extJson.from || extJson.region}",
+        //   "className": "label label-warning"
+        // },
+        {
+          "type": "mapping",
+          "label": "来源类型",
+          "name": "itemType",
+          "map": {
+            "solution": {
+              "type": "tpl",
+              "tpl": "定制方案",
+              "className": "label label-success"
+            },
+            "spu": {
+              "type": "tpl",
+              "tpl": "产品包/资源",
+              "className": "label label-success"
+            },
+            "sku": {
+              "type": "tpl",
+              "tpl": "产品/套餐",
+              "className": "label label-success"
+            },
+            "note": {
+              "type": "tpl",
+              "tpl": "笔记",
+              "className": "label label-success"
+            },
+            "*":{
+              "type": "tpl",
+              "tpl": "${itemType_dictText}",
+              "className": "label label-success"
+            }
+          }
+        },
+        
+      ],
+    }
+  },
+};
+
+//二维码链接弹框：能够从已发布的多个二维码中选择，包括小程序二维码
+export const qrcodeDialog = {
+  "type": "service",
+  "id":"linkservice",
+  // "className":"mb-20",
+  "initFetch": true,
+  "api": {
+    "method": "get",
+    "url": BIZ_API+"/erp/diyPublishProduct/full-publish-info",  //TODO 后端直接组织得到完整的发布记录，包括发布平台、短连接、二维码/小程序码地址
+    "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+    "replaceData": true,
+    "autoRefresh": true,
+    "requestAdaptor": function (api) { // 把当前触发条目作为hot，一并放入返回结果列表
+      let orgData = {...api.data}; 
+      console.log("got api data", orgData);
+      console.log("get hot product.", hot.product);
+      let targetData = {
+        itemType: hot.product.type,
+        itemId: hot.product.id,
+      };
+
+      let payload = {
+        ...api,
+        data: targetData //使用组装后的查询条件
+      };
+      console.log("try pub search.", payload);
+      return payload;
+    },
+    "adaptor": function (payload, response) {
+      //如果publishRecords为空，则自动补全平台默认发布，包括ilife及miniprog两个
+      // let pubRecords = payload.result.records;
+
+      //获取platform信息及已发布url、二维码信息
+      // let links = getPublishUrls( pubRecords );
+      console.log("got full publish info. ", payload);
+      return {
+        total: payload.length,
+        msg: "",
+        data: {
+          links: payload
+        },
+        status: 0
+      };
+    },
+    ...BIZ_CONFIG,
+    "data":{
+      // "&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+    }
+  },
+  "body": {
+    "type": "each",
+    "name": "links", //指定从数据域中获取用于循环的变量，即： data.records
+    // "className": "w-full", //IMPORTANT：由于生成后多出div，手动将该div设置为flex显示
+    "placeholder": "没有发布记录",
+    "items": {
+      "type": "card",
+      "className": "w-full",
+      "header": {
+        "title": "${itemName}",
+      },
+      "media": {
+        "type": "image",
+        "className": "h-24 w-24",
+        "url": "${qrcodeUrl || 'https://www.biglistoflittlethings.com/static/logo/distributor/'+platformSource.platform+'.png'}",
+        "position": "left"
+      },
+      "body":{
+        "type":"tpl",
+        "className": "text-xs",
+        "tpl":"发布平台：${ miniprogName || platformSource.name} <br/>发布时间：${DATETOSTR(createTime)}",
+      },
+      // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数：'+extJson.days:''}",
+      "actions": [
+        { 
+          "type": "button",
+          "label": "前往查看", //跳转到MP预览内容
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
+                    console.log("try redirect url",context, props.data);
+                    sendRedirect(props.data.publishUrl)
+                  },
+                },
+              ]
+            }
+          }
+        },
+        { 
+          "type": "button",
+          "label": "添加到正文", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": function(context,doAction,event){
+                    console.log("try copy qrcode url", context, event.data);
+                    let url = event.data.qrcodeUrl;
+                    //TODO 是否采用短码？
+                    //url = WEB_API+"/ilife-web-wx/x.html?x="+event.data.url.shortCode;
+                    appendText( {
+                      content: "<img src='"+ url +"'/>"
+                    } );
+                  }
+                },
+                {
+                  "actionType": "toast", // 执行toast提示动作
+                  "args": { // 动作参数
+                    "msgType": "success",
+                    "msg": "二维码图片已添加到正文"
+                  }
+                },
+              ]
+            }
+          }
+        },
+        { 
+          "type": "button",
+          "label": "复制到剪贴板",
+          "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+          "onEvent": {
+            "click": {
+              "actions": [
+                {
+                  "actionType": "custom",
+                  "script": function(context,doAction,event){
+                    console.log("try copy qrcode url", context, event.data);
+                    let url = event.data.qrcodeUrl;
+                    //TODO 是否采用短码？
+                    //url = WEB_API+"/ilife-web-wx/x.html?x="+event.data.url.shortCode;                    
+                    copyToClipboard("text/html", "<img src='"+ url +"'/>");
+                  }
+                },
+                {
+                  "actionType": "toast", // 执行toast提示动作
+                  "args": { // 动作参数
+                    "msgType": "success",
+                    "msg": "二维码图片已复制到剪贴板，可直接粘贴"
+                  }
+                },
+              ]
+            }
+          }
+        },
+      ],
+      "toolbar": [
+        // {
+        //   "type": "tpl",
+        //   "tpl": "${extJson.from || extJson.region}",
+        //   "className": "label label-warning"
+        // },
+        {
+          "type": "mapping",
+          "label": "来源类型",
+          "name": "itemType",
+          "map": {
+            "solution": {
+              "type": "tpl",
+              "tpl": "定制方案",
+              "className": "label label-success"
+            },
+            "spu": {
+              "type": "tpl",
+              "tpl": "产品包/资源",
+              "className": "label label-success"
+            },
+            "sku": {
+              "type": "tpl",
+              "tpl": "产品/套餐",
+              "className": "label label-success"
+            },
+            "note": {
+              "type": "tpl",
+              "tpl": "笔记",
+              "className": "label label-success"
+            },
+            "*":{
+              "type": "tpl",
+              "tpl": "${itemType_dictText}",
+              "className": "label label-success"
+            }
+          }
+        },
+        
+      ],
+    }
+  },
+};
+
+//已发布链接弹框：能够从已发布的多个链接中选择
+//默认是一个service，能够根据选中的商品或方案查询发布记录得到
+export const linkDialog = {
+  "type": "service",
+  "id":"linkservice",
+  // "className":"mb-20",
+  "initFetch": true,
+  "api": {
+    "method": "get",
+    "url": BIZ_API+"/erp/diyPublishProduct/full-publish-info",  //注意需要补全platformSource。 其中包含有publishUrl。对于小程序发布，默认会采用ilife平台C端分销URL
+    "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+    "replaceData": true,
+    "autoRefresh": true,
+    "requestAdaptor": function (api) { // 把当前触发条目作为hot，一并放入返回结果列表
+      let orgData = {...api.data}; 
+      console.log("got api data", orgData);
+      console.log("get hot product.", hot.product);
+      let targetData = {
+        itemType: hot.product.type,
+        itemId: hot.product.id,
+      };
+
+      let payload = {
+        ...api,
+        data: targetData //使用组装后的查询条件
+      };
+      console.log("try pub search.", payload);
+      return payload;
+    },
+    "adaptor": function (payload, response) {;
+      console.log("got full publish info. ", payload);
+      return {
+        total: payload.length,
+        msg: "",
+        data: {
+          links: payload
+        },
+        status: 0
+      };
+    },
+    ...BIZ_CONFIG,
+    "data":{
+      // "&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+    }
+  },
+  "body": {
+    "type": "each",
+    "name": "links", //指定从数据域中获取用于循环的变量，即： data.records
+    // "className": "w-full", //IMPORTANT：由于生成后多出div，手动将该div设置为flex显示
+    "placeholder": "没有发布记录",
+    "items": {
+      "type": "card",
+      "className": "w-full",
+      "header": {
+        "title": "${itemName}",
+      },
+      "media": {
+        "type": "image",
+        "className": "h-24 w-24",
+        "url": "${miniprogLogo || 'https://www.biglistoflittlethings.com/static/logo/distributor/'+platformSource.platform+'.png'}",
+        "position": "left"
+      },
+      "body":{
+        "type":"tpl",
+        "className": "text-xs",
+        "tpl":"发布平台：${ miniprogName || platformSource.name} <br/>发布时间：${DATETOSTR(createTime)}",
       },
       // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数：'+extJson.days:''}",
       "actions": [
@@ -660,7 +1077,7 @@ export const solutionForm = {
                     "actions": [
                       { 
                         "type": "button",
-                        "label": "查看方案", //跳转到MP预览内容
+                        "label": "查看详情", //跳转到MP预览内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
@@ -678,7 +1095,7 @@ export const solutionForm = {
                       },
                       { 
                         "type": "button",
-                        "label": "文字链接", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "label": "链接", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
@@ -690,21 +1107,21 @@ export const solutionForm = {
                                   //修改当前操作对象
                                   hot.product = {  
                                     ...props.data,
-                                    type: props.data.source?'sku':'solution'
+                                    type: 'solution'
                                   };
                                   //打开对话框
                                   doAction({ //显示已发布链接列表
                                     "actionType": "dialog",
                                     "dialog": {
-                                      "title": "已发布列表",
+                                      "title": "已发布链接",
                                       "size": "sm",
                                       "closeOnEsc": true,
                                       "closeOnOutside": true,
                                       "actions": [
                                         {
                                           "type": "button",
-                                          "label": "前往发布/上架 ${name}",
-                                          "className": "border-none text-right text-primary",
+                                          "label": "前往发布/上架",
+                                          "className": "border-none text-right text-primary -mt-4",
                                           "onEvent": {
                                             "click": {
                                               "actions": [
@@ -740,9 +1157,45 @@ export const solutionForm = {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
-                                  console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                "script": (context, doAction, props) => { //设置当前选中条目，并显示对话框
+                                  console.log("set hot product", props.data);
+                                  //修改当前操作对象
+                                  hot.product = {  
+                                    ...props.data,
+                                    type: 'solution'
+                                  };
+                                  //打开对话框
+                                  doAction({ //显示已发布链接列表
+                                    "actionType": "dialog",
+                                    "dialog": {
+                                      "title": "已发布二维码",
+                                      "size": "sm",
+                                      "closeOnEsc": true,
+                                      "closeOnOutside": true,
+                                      "actions": [
+                                        {
+                                          "type": "button",
+                                          "label": "前往发布/上架",
+                                          "className": "border-none text-right text-primary -mt-4",
+                                          "onEvent": {
+                                            "click": {
+                                              "actions": [
+                                                {
+                                                  "actionType": "custom",
+                                                  "script": (context, event, props) => { 
+                                                    console.log("try redirect",context, props.data);
+                                                    sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                                    
+                                                  },
+                                                },
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "body": qrcodeDialog
+                                    }
+                                  });
                                 },
                               },
                             ]
@@ -751,16 +1204,52 @@ export const solutionForm = {
                       },
                       { 
                         "type": "button",
-                        "label": "小程序卡片", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "label": "小程序", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
-                                  console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                "script": (context, doAction, props) => { //设置当前选中条目，并显示对话框
+                                  console.log("set hot product", props.data);
+                                  //修改当前操作对象
+                                  hot.product = {  
+                                    ...props.data,
+                                    type: 'solution'
+                                  };
+                                  //打开对话框
+                                  doAction({ //显示已发布链接列表
+                                    "actionType": "dialog",
+                                    "dialog": {
+                                      "title": "小程序码/卡片",
+                                      "size": "sm",
+                                      "closeOnEsc": true,
+                                      "closeOnOutside": true,
+                                      "actions": [
+                                      //   {
+                                      //     "type": "button",
+                                      //     "label": "前往发布/上架",
+                                      //     "className": "border-none text-right text-primary -mt-4",
+                                      //     "onEvent": {
+                                      //       "click": {
+                                      //         "actions": [
+                                      //           {
+                                      //             "actionType": "custom",
+                                      //             "script": (context, event, props) => { 
+                                      //               console.log("try redirect",context, props.data);
+                                      //               sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                                    
+                                      //             },
+                                      //           },
+                                      //         ]
+                                      //       }
+                                      //     }
+                                      //   }
+                                      ],
+                                      "body": miniprogDialog
+                                    }
+                                  });
                                 },
                               },
                             ]
@@ -1519,41 +2008,55 @@ export const skuForm = {
                       },
                       { 
                         "type": "button",
-                        "label": "文字链接", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "label": "链接", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
                             "actions": [
-                              { //显示已发布链接列表
-                                "actionType": "dialog",
-                                "dialog": {
-                                  "title": "已发布列表",
-                                  "size": "sm",
-                                  "closeOnEsc": true,
-                                  "closeOnOutside": true,
-                                  "actions": [
-                                    {
-                                      "type": "button",
-                                      "label": "前往发布/上架 ${name}",
-                                      "className": "border-none text-right text-primary",
-                                      "onEvent": {
-                                        "click": {
-                                          "actions": [
-                                            {
-                                              "actionType": "custom",
-                                              "script": (context, event, props) => { 
-                                                console.log("try redirect",context, props.data);
-                                                sendRedirect(WEB_API + "/c2b/travel/my-sku?id="+props.data.id);
-                                              },
-                                            },
-                                          ]
+                              {
+                                "actionType": "custom",
+                                "script": (context, doAction, props) => { //设置当前选中条目，并显示对话框
+                                  console.log("set hot product", props.data);
+                                  //修改当前操作对象
+                                  hot.product = {  
+                                    ...props.data,
+                                    type: 'sku'
+                                  };
+                                  //打开对话框
+                                  doAction({ //显示已发布链接列表
+                                    "actionType": "dialog",
+                                    "dialog": {
+                                      "title": "已发布链接",
+                                      "size": "sm",
+                                      "closeOnEsc": true,
+                                      "closeOnOutside": true,
+                                      "actions": [
+                                        {
+                                          "type": "button",
+                                          "label": "前往发布/上架",
+                                          "className": "border-none text-right text-primary -mt-4",
+                                          "onEvent": {
+                                            "click": {
+                                              "actions": [
+                                                {
+                                                  "actionType": "custom",
+                                                  "script": (context, event, props) => { 
+                                                    console.log("try redirect",context, props.data);
+                                                    sendRedirect(WEB_API + "/c2b/travel/my-sku?id="+props.data.id);
+                                                    
+                                                  },
+                                                },
+                                              ]
+                                            }
+                                          }
                                         }
-                                      }
+                                      ],
+                                      "body": linkDialog
                                     }
-                                  ],
-                                  "body": linkDialog
-                                }
-                              }
+                                  });
+                                },
+                              },
+                              
                             ]
                           }
                         }
@@ -1567,9 +2070,45 @@ export const skuForm = {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
-                                  console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                "script": (context, doAction, props) => { //设置当前选中条目，并显示对话框
+                                  console.log("set hot product", props.data);
+                                  //修改当前操作对象
+                                  hot.product = {  
+                                    ...props.data,
+                                    type: 'sku'
+                                  };
+                                  //打开对话框
+                                  doAction({ //显示已发布链接列表
+                                    "actionType": "dialog",
+                                    "dialog": {
+                                      "title": "已发布二维码",
+                                      "size": "sm",
+                                      "closeOnEsc": true,
+                                      "closeOnOutside": true,
+                                      "actions": [
+                                        {
+                                          "type": "button",
+                                          "label": "前往发布/上架",
+                                          "className": "border-none text-right text-primary -mt-4",
+                                          "onEvent": {
+                                            "click": {
+                                              "actions": [
+                                                {
+                                                  "actionType": "custom",
+                                                  "script": (context, event, props) => { 
+                                                    console.log("try redirect",context, props.data);
+                                                    sendRedirect(WEB_API + "/c2b/travel/my-sku?id="+props.data.id);
+                                                    
+                                                  },
+                                                },
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "body": qrcodeDialog
+                                    }
+                                  });
                                 },
                               },
                             ]
@@ -1578,22 +2117,59 @@ export const skuForm = {
                       },
                       { 
                         "type": "button",
-                        "label": "小程序卡片", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "label": "小程序", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
                         "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
                         "onEvent": {
                           "click": {
                             "actions": [
                               {
                                 "actionType": "custom",
-                                "script": (context, event, props) => { //注意：采用脚本时需要通过props获取行数据
-                                  console.log("try redirect prompts page",context, props.data);
-                                  sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                "script": (context, doAction, props) => { //设置当前选中条目，并显示对话框
+                                  console.log("set hot product", props.data);
+                                  //修改当前操作对象
+                                  hot.product = {  
+                                    ...props.data,
+                                    type: 'sku'
+                                  };
+                                  //打开对话框
+                                  doAction({ //显示已发布链接列表
+                                    "actionType": "dialog",
+                                    "dialog": {
+                                      "title": "小程序码/卡片",
+                                      "size": "sm",
+                                      "closeOnEsc": true,
+                                      "closeOnOutside": true,
+                                      "actions": [
+                                      //   {
+                                      //     "type": "button",
+                                      //     "label": "前往发布/上架",
+                                      //     "className": "border-none text-right text-primary -mt-4",
+                                      //     "onEvent": {
+                                      //       "click": {
+                                      //         "actions": [
+                                      //           {
+                                      //             "actionType": "custom",
+                                      //             "script": (context, event, props) => { 
+                                      //               console.log("try redirect",context, props.data);
+                                      //               sendRedirect(WEB_API + "/c2b/travel/solution?id="+props.data.id)
+                                                    
+                                      //             },
+                                      //           },
+                                      //         ]
+                                      //       }
+                                      //     }
+                                      //   }
+                                      ],
+                                      "body": miniprogDialog
+                                    }
+                                  });
                                 },
                               },
                             ]
                           }
                         }
                       },
+                      
                     ],
                     "toolbar": [
                       {

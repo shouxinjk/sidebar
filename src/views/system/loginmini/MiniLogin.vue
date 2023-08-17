@@ -334,7 +334,7 @@
   function weworkLogin() {
     console.log("start generate wework login panel.", ww.SDK_VERSION);
     // 判断来源：toolbar、helper、sidebar
-    let to = WEB_API+'/dashboard/analysis'; //默认到dashboard
+    let to = WEB_API+'/c2b/toolbar/sidebar'; //'/dashboard/analysis'; //默认到dashboard
     let from = document.referrer;
     if( from && from.indexOf("/editor")>0){ //内容插件
       to = from; // '/c2b/toolbar/editor';

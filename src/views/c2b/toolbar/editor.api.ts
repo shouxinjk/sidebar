@@ -4,7 +4,7 @@ import {Md5} from 'ts-md5';
 import { getTenantId, getToken } from "/@/utils/auth";
 import { getTenantById } from '/@/views/system/tenant/tenant.api';
 import { router } from '/@/router';
-import {SEARCH_API, SEARCH_CONFIG, BIZ_CONFIG, WEWORK_API, MP_API, MP_CONFIG, BIZ_API} from '/@/settings/iLifeSetting';
+import {SEARCH_API, SEARCH_CONFIG, BIZ_CONFIG, WEWORK_API, MP_API, MP_CONFIG, BIZ_API, WXMP_API, WXMP_CONFIG} from '/@/settings/iLifeSetting';
 import { useGlobSetting } from '/@/hooks/setting';
 import { timestamp } from '@vueuse/shared';
 import { reactive } from 'vue';
@@ -37,6 +37,16 @@ export const hot = reactive({
   product: {id: "", name: "", type: "" },
 
 });
+
+//上传公众号图片素材：用于插入小程序卡片时，作为永久素材上传，但不占用永久素材数量
+//TBC：当前提示图片不符合规范
+export const uploadImageByUrl = (imgUrl) => {
+  //直接提交到ilife公众号
+  return axios
+    .post(WXMP_API+"/upload-media",{
+      imgUrl: imgUrl
+    }, WXMP_CONFIG);
+}
 
 //打开内容链接：在iframe中不能直接完成，需要postMessage 到父窗口
 export const openConentLink = ( genRecord ) => {

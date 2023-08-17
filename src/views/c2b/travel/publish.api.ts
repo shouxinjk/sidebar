@@ -37,11 +37,10 @@ export const getPublishUrls = async ( pubRecords ) => {
                       });
   
   //加载
-  let  res = await Promise.all([getPlatformSources, getUrlsByItemId]);
-
+  let res = await Promise.all([getPlatformSources, getUrlsByItemId]);
   console.log("got platform sources and publish urls.",res);
-  let platformSources = await res[0].data.result.records;
-  let publishedUrls = await res[1].data.data;
+  let platformSources = res[0].data.result.records;
+  let publishedUrls = res[1].data.data;
 
   //将platform信息及url信息装载到发布记录上
   pubRecords.forEach( record => {
@@ -65,18 +64,11 @@ export const getPublishUrls = async ( pubRecords ) => {
  * 增加默认发布记录。包括sku及solution。
  * @param pubRecord 发布记录：包含sku、spu、solution
  */
-  export const addPublishRecord = async ( pubRecord ) => {
+  export const addPublishRecord = ( pubRecord ) => {
     console.log("try add pub record.",pubRecord);
     //直接提交新记录即可
-    axios
-    .post(BIZ_API + "/erp/diyPublishProduct/add", pubRecord, BIZ_CONFIG)
-    .then(res => { 
-      console.log("pub record added.",res);
-    })
-    .catch(function (error) { 
-      console.log("failed add pub record",error);
-      
-    });
+    return axios
+    .post(BIZ_API + "/erp/diyPublishProduct/add", pubRecord, BIZ_CONFIG);
     
   }
   
