@@ -53,10 +53,12 @@
       //if(stateInfo.length>1)sessionStorage.setItem("agentId",stateInfo[1]);
       env.value.thirdApp = true;
       env.value.wework = true;
-    }else if (/wxwork/i.test(navigator.userAgent)) {     // 判断当时是否是企业微信环境：自建应用
+    }/*
+    else if (/wxwork/i.test(navigator.userAgent)) {     // 判断当时是否是企业微信环境：自建应用。不支持
       env.value.thirdApp = true;
       env.value.wxWork = true;
-    }else if (/dingtalk/i.test(navigator.userAgent)) {     // 判断当时是否是钉钉环境
+    }//** */
+    else if (/dingtalk/i.test(navigator.userAgent)) {     // 判断当时是否是钉钉环境
       env.value.thirdApp = true;
       env.value.dingtalk = true;
     } 
