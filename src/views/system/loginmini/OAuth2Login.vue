@@ -43,7 +43,7 @@
     }
     //** */
     console.log("check oauth2 env", route.query, window.location.href);
-    if (/wxwork/i.test(navigator.userAgent) && route.query.code  && route.query.state  ) {     // 判断当时是否是企业微信环境：服务商。
+    if (/wxwork/i.test(navigator.userAgent) /* && route.query.code  && route.query.state */ ) {     // 判断当时是否是企业微信环境：服务商。
       //当前判断不严格：受限于应用场景，与企微侧边栏配置保持一致。企微侧边栏配置中直接通过oauth链接获取code和state后进入SaaS
       //企微侧边栏配置需要带入授权企业的corpId及agentId信息，可以据此判定是服务商应用，state结构为 corpId__agentId
       //let stateInfo = route.query.state.toString().split("__");
