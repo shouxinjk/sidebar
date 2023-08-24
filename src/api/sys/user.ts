@@ -150,8 +150,9 @@ export const passwordChange = (params) => defHttp.get({ url: Api.passwordChange,
 export function thirdLogin(params, mode: ErrorMessageMode = 'modal') {
   console.log("start third login.",params.thirdType, params);
   //ilife：优先判断是否wework服务商登录
+  //ilife: 支持两种模式：1）带有code、state待登录 2)带有oauth2LoginToken 则直接进入其他逻辑
   //传递参数包括：suiteId、code、state
-  if ( params.thirdType == "wework"){
+  if ( params.thirdType == "wework" && params.code ){ //待登录
     return defHttp.post<LoginResultModel>(
       {
         url: `${Api.weworkLogin}`,
