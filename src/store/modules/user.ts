@@ -203,10 +203,10 @@ export const useUserStore = defineStore({
                 }
             }, '*');  
             await router.replace("/c2b/toolbar/helper")
-        }else if( getUrlParam("origin") === "sidebar" || sxLoginOrigin === "sidebar" ){ //侧边栏通过state判定具体进入的tab页面
-            let tab = "";
-            if(sxLoginState && sxLoginState.trim().length>0)
-              tab = "?tab="+sxLoginState;
+        }else if( getUrlParam("origin") === "sidebar" || sxLoginOrigin === "sidebar" ){ //侧边栏通过state判定具体进入的tab页面: 直接在sidebar页面获取localStorage即可
+            // let tab = "";
+            // if(sxLoginState && sxLoginState.trim().length>0)
+            //   tab = "?tab="+sxLoginState;
             console.log("sxToolbar:sidebar");
             await router.replace("/c2b/toolbar/sidebar")
         }else if( getUrlParam("origin") === "editor" || sxLoginOrigin === "editor" ){ //对于浏览器插件，仅需要判断是否是对应插件即可
