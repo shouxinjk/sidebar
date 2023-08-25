@@ -338,10 +338,16 @@
     let from = document.referrer;
     if( from && from.indexOf("/editor")>0){ //内容插件
       to = from; // '/c2b/toolbar/editor';
+      localStorage.setItem("sxLoginOrigin", "editor"); //记录登录入口
+      localStorage.setItem("sxLoginState", "editor"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
     }else if( from && from.indexOf("/helper")>0){ //OTA及电商插件
       to = from; // '/c2b/toolbar/helper';
+      localStorage.setItem("sxLoginOrigin", "helper"); //记录登录入口
+      localStorage.setItem("sxLoginState", "editor"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
     }else if( from && from.indexOf("/sidebar")>0){ //企微侧边栏
-      to = from; // '/c2b/toolbar/sidebar';
+      to = from; // '/c2b/toolbar/sidebar'; //sidebar不会进入此逻辑，将直接进入OAuth2Login
+      // localStorage.setItem("sxLoginOrigin", "sidebar"); //记录登录入口
+      // localStorage.setItem("sxLoginState", "sidebar"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
     }
     // 初始化
     const wwLogin = ww.createWWLoginPanel({
@@ -360,12 +366,16 @@
         console.log("onCheckWeComLogin",isWeComLogin)
       },
       onLoginSuccess({ code }) {
+        //检查本地登录设置
+        let state = "home";//默认为home
+        if ( localStorage.getItem("sxLoginState") && localStorage.getItem("sxLoginState").trim().length>0 )
+          state = localStorage.getItem("sxLoginState") ;
         //根据code完成登录
         console.log("onLoginSuccess",{ code })
         weworkThirdLogin({//传递suiteId、code、state完成企业微信登录
           suiteId: PROVIDER_SUITE_ID, //注意这里使用服务商suite_id完成登录
           code: code,
-          state: "home", //跳转到用户首页
+          state: state, //"home", //跳转到用户首页
           thirdType: "wework"
         });
       },

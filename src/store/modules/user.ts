@@ -176,9 +176,24 @@ export const useUserStore = defineStore({
         //goHome && (await router.replace((userInfo && userInfo.homePath) || PageEnum.BASE_HOME));
 
         //添加入口判断，如果是工具条则跳转到相应页面
+        /**
+         * 仅处理初次登录跳转，登录后切换直接进入对应URL
+         * 
+         * 注意：
+         * 初次登录由于会经过后端oauth登录，导致origin丢失，无法通过origin识别入口
+         * 
+         * 处理逻辑：
+         * 前置登录步骤将保存登录入口及参数：
+         * * sxLoginOrigin：记录来源：editor、toolbar、sidebar，分别表示内容浏览器侧边栏、电商浏览器侧边栏、企微侧边栏
+         * * sxLoginContext: 记录登录环境，pc、mobile，分别表示企微PC端、企微手机端
+         * * sxLoginState: 登录目标标记，all、solution、note、sku、kb、ai、content、poster等，由业务代码与相应入口配置完成
+         */
         //sxToolbar
+        let sxLoginOrigin = localStorage.getItem("sxLoginOrigin");
+        let sxLoginContext = localStorage.getItem("sxLoginContext"); //此处无需判断，仅用于企微工作台进入判断，在前置OAuth2Login步骤中已经完成判断及分流
+        let sxLoginState = localStorage.getItem("sxLoginState");
         console.log("sxToolbar login check.", getUrlParam("origin") );
-        if( getUrlParam("origin") === "helper" ){
+        if( getUrlParam("origin") === "helper" || sxLoginOrigin === "helper" ){ //对于浏览器插件，仅需要判断是否是对应插件即可
             console.log("sxToolbar:helper");
             //通知上层窗口修改登录状态
             window.parent.postMessage({
@@ -188,10 +203,13 @@ export const useUserStore = defineStore({
                 }
             }, '*');  
             await router.replace("/c2b/toolbar/helper")
-        }else if( getUrlParam("origin") === "sidebar" ){
+        }else if( getUrlParam("origin") === "sidebar" || sxLoginOrigin === "sidebar" ){ //侧边栏通过state判定具体进入的tab页面
+            let tab = "";
+            if(sxLoginState && sxLoginState.trim().length>0)
+              tab = "?tab="+sxLoginState;
             console.log("sxToolbar:sidebar");
-            await router.replace("/c2b/toolbar/sidebar")
-        }else if( getUrlParam("origin") === "editor" ){
+            await router.replace("/c2b/toolbar/sidebar"+tab)
+        }else if( getUrlParam("origin") === "editor" || sxLoginOrigin === "editor" ){ //对于浏览器插件，仅需要判断是否是对应插件即可
             console.log("sxToolbar: mp");
             //通知上层窗口修改登录状态
             window.parent.postMessage({
