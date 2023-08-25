@@ -164,7 +164,7 @@ export function thirdLogin(params, mode: ErrorMessageMode = 'modal') {
     );
   }
 
-  //其他逻辑
+  //其他逻辑：已经完成登录，带有token。加载用户数据即可
   return defHttp.get<LoginResultModel>(
     {
       url: `${Api.thirdLogin}/${params.token}/${params.thirdType}`,
