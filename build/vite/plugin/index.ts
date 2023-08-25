@@ -17,6 +17,7 @@ import { configImageminPlugin } from './imagemin';
 import { configSvgIconsPlugin } from './svgSprite';
 import OptimizationPersist from 'vite-plugin-optimize-persist'
 import PkgConfig from 'vite-plugin-package-config'
+import { merge } from 'xe-utils';
 
 export function createVitePlugins(viteEnv: ViteEnv, isBuild: boolean) {
   const { VITE_USE_IMAGEMIN, VITE_USE_MOCK, VITE_LEGACY, VITE_BUILD_COMPRESS, VITE_BUILD_COMPRESS_DELETE_ORIGIN_FILE } = viteEnv;
@@ -35,7 +36,13 @@ export function createVitePlugins(viteEnv: ViteEnv, isBuild: boolean) {
   ];
 
   // vite-plugin-windicss
-  vitePlugins.push(windiCSS());
+  //vitePlugins.push(windiCSS());
+  vitePlugins.push(windiCSS({ // ilife: to accelerate loading
+    async onConfigResolved(config) {
+       // override the windicss config, eg: extract, etc.
+      return merge({}, config, {extract: {extractros: []}});
+    }
+  }));
 
   // @vitejs/plugin-legacy
   VITE_LEGACY && isBuild && vitePlugins.push(legacy());
