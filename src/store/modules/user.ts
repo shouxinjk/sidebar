@@ -190,7 +190,7 @@ export const useUserStore = defineStore({
          */
         //sxToolbar
         let sxLoginOrigin = localStorage.getItem("sxLoginOrigin");
-        let sxLoginContext = localStorage.getItem("sxLoginContext"); //此处无需判断，仅用于企微工作台进入判断，在前置OAuth2Login步骤中已经完成判断及分流
+        let sxLoginDevice = localStorage.getItem("sxLoginDevice"); //此处无需判断，仅用于企微工作台进入判断，在前置OAuth2Login步骤中已经完成判断及分流
         let sxLoginState = localStorage.getItem("sxLoginState");
         console.log("sxToolbar login check.", getUrlParam("origin") );
         if( getUrlParam("origin") === "helper" || sxLoginOrigin === "helper" ){ //对于浏览器插件，仅需要判断是否是对应插件即可

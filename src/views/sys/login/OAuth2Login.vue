@@ -74,8 +74,7 @@
    * 4）
    *
    */
-  function doOAuth2Login() {
-    console.log("try doOAuth2Login", env, route.query);
+   function doOAuth2Login() {
     if (env.value.thirdApp) {
       // 判断是否携带了Token，是就说明登录成功
       if (route.query.oauth2LoginToken) {
@@ -86,12 +85,12 @@
         //其业微信工作台手机端：进入sidebar，显示移动端界面，在sidebar内完成后续登录。进入时带有参数：state=mobile，需要配置到应用后台
         //TODO：增加判断，如果是桌面环境，则跳转到air下，根据token获取用户信息
         //获取登录上下文：
-        let sxLoginState = localStorage.getItem("sxLoginState");
-        console.log("got login state.", sxLoginState);
-        if( sxLoginState === "pc" ){ //PC端跳转到air桌面
+        let sxLoginDevice = localStorage.getItem("sxLoginDevice");
+        console.log("got login state.", sxLoginDevice);
+        if( sxLoginDevice === "pc" ){ //PC端跳转到air桌面
           let url = window.location.href.replace(/sidebar\./g,"air.");//跳转到air
           window.location.href = url; //直接跳转
-        }else if( sxLoginState === "mobile" ){ //移动端，直接获取登录信息，并接入相应界面
+        }else if( sxLoginDevice === "mobile" ){ //移动端，直接获取登录信息，并接入相应界面
           thirdLogin({ token, thirdType: route.query.thirdType });
         }else{
           thirdLogin({ token, thirdType: route.query.thirdType });
@@ -102,8 +101,18 @@
         let state = route.query.state;
         console.log("route.query.",route.query);
         console.log("wework login with code and state.",SUITE_ID, code, state, window.location.href);
-        //记录登录上下文环境
-        localStorage.setItem("sxLoginState", ""+route.query.state);
+        //判断是否是从企微侧边栏进入，根据地址是否为toolbar地址判定。经过微信跳转的企微侧边栏地址为：
+        //https://sidebar.biglistoflittlethings.com/c2b/toolbar/sidebar?tab=solution&corpId=ww0c1081973d35aa17&agentId=1000038&code=xxx&state=xxx
+        if ( window.location.href.indexOf("/toolbar") > 0 ){
+          console.log("got sidebar url", route.query.tab, window.location.href );
+          localStorage.setItem("sxLoginOrigin", "sidebar");//记录登录入口为sidebar
+          //记录登录目标tab信息，记录在redirectUrl中的tab参数内，直接提取即可
+          if( getUrlParam("tab") && getUrlParam("tab").trim().length>0)
+            localStorage.setItem("sxLoginState", getUrlParam("tab"));//从参数中获取tab类型
+        }else{ //注意，避免影响企微工作台入口情景，清除
+          //do nothing
+        }
+
         //执行登录操作
         thirdLogin({ //传递suiteId、code、state完成企业微信登录
           suiteId: SUITE_ID,
@@ -115,7 +124,7 @@
         //判断state参数：从工作台进入时，移动端state=mobile，PC端state=pc；从侧边栏进入时，state为toolbar下特定编码，且redirect路径包含toolbar
         localStorage.removeItem("sxLoginContext"); //认为是初次进入，清除登录记录
         if( route.query.state ){
-          localStorage.setItem("sxLoginState", ""+route.query.state);
+          localStorage.setItem("sxLoginDevice", ""+route.query.state); //从服务端配置时需要指定state参数
         }
         sysOAuth2Login('wework');
       } else if (env.value.wxWork) { //预留。当前未启用
