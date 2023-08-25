@@ -121,6 +121,7 @@ if (getUrlParam('tab') && getUrlParam('tab').trim().length>0){ //直接从URL获
 }else if( localStorage.getItem("sxLoginState") && localStorage.getItem("sxLoginState").trim().length>0 ){ //尝试从localStorage获取指定的信息
   tab = localStorage.getItem("sxLoginState");
 }
+console.log("got tab.", tab);
   
 if( tab && tab == "note"){
   tabjson = noteForm;
