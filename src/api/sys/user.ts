@@ -152,7 +152,8 @@ export function thirdLogin(params, mode: ErrorMessageMode = 'modal') {
   //ilife：优先判断是否wework服务商登录
   //ilife: 支持两种模式：1）带有code、state待登录 2)带有oauth2LoginToken 则直接进入其他逻辑
   //传递参数包括：suiteId、code、state
-  if ( params.thirdType == "wework" && params.code ){ //待登录
+  if ( params.thirdType === "wework" && params.code ){ //待登录
+    console.log("start third login with code.",params.thirdType, params);
     return defHttp.post<LoginResultModel>(
       {
         url: `${Api.weworkLogin}`,
@@ -165,6 +166,7 @@ export function thirdLogin(params, mode: ErrorMessageMode = 'modal') {
   }
 
   //其他逻辑：已经完成登录，带有token。加载用户数据即可
+  console.log("login done. try load user info.",params.thirdType, params);
   return defHttp.get<LoginResultModel>(
     {
       url: `${Api.thirdLogin}/${params.token}/${params.thirdType}`,
