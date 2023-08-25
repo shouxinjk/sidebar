@@ -125,20 +125,24 @@
     const userStore = useUserStore();
     const { notification } = useMessage();
     const { t } = useI18n();
-    userStore.ThirdLogin(params).then((res) => {
-      if (res && res.userInfo) {
-        notification.success({
-          message: t('sys.login.loginSuccessTitle'),
-          description: `${t('sys.login.loginSuccessDesc')}: ${res.userInfo.realname}`,
-          duration: 3,
-        });
-      } else {
-        notification.error({
-          message: t('sys.login.errorTip'),
-          description: ((res.response || {}).data || {}).message || res.message || t('sys.login.networkExceptionMsg'),
-          duration: 4,
-        });
-      }
-    });
+    userStore.ThirdLogin(params)
+      .then((res) => {
+        if (res && res.userInfo) {
+          notification.success({
+            message: t('sys.login.loginSuccessTitle'),
+            description: `${t('sys.login.loginSuccessDesc')}: ${res.userInfo.realname}`,
+            duration: 3,
+          });
+        } else {
+          notification.error({
+            message: t('sys.login.errorTip'),
+            description: ((res.response || {}).data || {}).message || res.message || t('sys.login.networkExceptionMsg'),
+            duration: 4,
+          });
+        }
+      })
+      .catch( error => {
+        console.log("thirdLogin failed with exeption.", params, error);
+      });
   }
 </script>
