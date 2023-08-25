@@ -208,7 +208,7 @@ export const useUserStore = defineStore({
             if(sxLoginState && sxLoginState.trim().length>0)
               tab = "?tab="+sxLoginState;
             console.log("sxToolbar:sidebar");
-            await router.replace("/c2b/toolbar/sidebar"+tab)
+            await router.replace("/c2b/toolbar/sidebar")
         }else if( getUrlParam("origin") === "editor" || sxLoginOrigin === "editor" ){ //对于浏览器插件，仅需要判断是否是对应插件即可
             console.log("sxToolbar: mp");
             //通知上层窗口修改登录状态

@@ -115,7 +115,13 @@ let tabjson = {
 };
 
 //根据tab类型区分内容显示
-let tab = getUrlParam('tab');//从参数中获取tab类型
+let tab = "";
+if (getUrlParam('tab') && getUrlParam('tab').trim().length>0){ //直接从URL获取指定tab
+  tab = getUrlParam('tab');//从参数中获取tab类型
+}else if( localStorage.getItem("sxLoginState") && localStorage.getItem("sxLoginState").trim().length>0 ){ //尝试从localStorage获取指定的信息
+  tab = localStorage.getItem("sxLoginState");
+}
+  
 if( tab && tab == "note"){
   tabjson = noteForm;
 }else if( tab && tab == "ai"){
