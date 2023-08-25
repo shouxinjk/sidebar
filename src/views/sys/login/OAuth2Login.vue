@@ -12,6 +12,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { SUITE_ID } from '/@/settings/iLifeSetting';
+import { getUrlParam } from '/@/utils';
 
   const isOAuth = ref<boolean>(isOAuth2AppEnv());
   const env = ref<any>({ thirdApp: false, wxWork: false, dingtalk: false });
@@ -109,8 +110,9 @@
           //记录登录目标tab信息，记录在redirectUrl中的tab参数内，直接提取即可
           if( getUrlParam("tab") && getUrlParam("tab").trim().length>0)
             localStorage.setItem("sxLoginState", getUrlParam("tab"));//从参数中获取tab类型
-        }else{ //注意，避免影响企微工作台入口情景，清除
-          //do nothing
+        }else{ //注意，避免影响企微工作台入口情景
+          localStorage.removeItem("sxLoginOrigin");
+          localStorage.removeItem("sxLoginState");
         }
 
         //执行登录操作
