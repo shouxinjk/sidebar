@@ -143,6 +143,8 @@
       })
       .catch( error => {
         console.log("thirdLogin failed with exeption.", params, error);
+      }).finally( () => {
+        console.log("thirdLogin finally.", params);
       });
   }
 </script>

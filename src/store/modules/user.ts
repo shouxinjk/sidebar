@@ -313,6 +313,7 @@ export const useUserStore = defineStore({
         console.log("third login done and got data. ",data);
         return this.afterLoginAction(goHome, data);
       } catch (error) {
+        console.log("third login error. ",error);
         return Promise.reject(error);
       }
     },
