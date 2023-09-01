@@ -1059,8 +1059,8 @@ export const kefuForm = {
                     },
                     "media": {
                       "type": "image",
-                      "className": "h-32 w-32",
-                      "url": "${qrcodeUrl}",
+                      "className": "h-24 w-24",
+                      "url": "${qrcodeUrl?qrcodeUrl:'https://www.biglistoflittlethings.com/static/logo/distributor/ilife.png'}",
                       "position": "left"
                     },
                     "body":{
@@ -1348,7 +1348,7 @@ export const solutionForm = {
                     "media": {
                       "type": "image",
                       "className": "w-full h-24",
-                      "url": "${logo}",
+                      "url": "${logo || 'https://www.biglistoflittlethings.com/ilife-web-wx/images/avatar/default.jpg'}",
                       "position": "top"
                     },
                     "body":{
@@ -2256,7 +2256,7 @@ export const skuForm = {
                     "media": {
                       "type": "image",
                       "className": "w-full h-24",
-                      "url": "${logo}",
+                      "url": "${logo || 'https://www.biglistoflittlethings.com/ilife-web-wx/images/avatar/default.jpg'}",
                       "position": "top"
                     },
                     "body":{
