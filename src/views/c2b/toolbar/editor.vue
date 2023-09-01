@@ -56,7 +56,7 @@
 import Amis from "../../amis/components/Amis.vue";
 import 'amis/sdk/tinymce';
 import 'amis/sdk/rest';
-import { kbForm,solutionForm, aiForm, contentForm, skuForm, posterForm } from './editor.data';
+import { kbForm,solutionForm, aiForm, contentForm, skuForm, posterForm, kefuForm } from './editor.data';
 import { listenPostMessage } from './editor.api';
 
 // import { useUserStore } from '/@/store/modules/user';
@@ -92,6 +92,10 @@ const tabjson = {
       {
         "title": "海报",
         "tab": posterForm
+      },
+      {
+        "title": "客服",
+        "tab": kefuForm
       },
       {
         "title": "方案库",

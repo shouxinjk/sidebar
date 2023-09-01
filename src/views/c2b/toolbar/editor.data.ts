@@ -946,6 +946,289 @@ export const posterForm = {
   }
 };
 
+
+//客服获客链接二维码列表，能够插入客服链接或二维码图片
+export const kefuForm = {
+  "type": "page",
+  "name": "kefuform",
+  "id": "kefuform",
+  "title": "客服列表",
+  "body": [
+    {
+      "type": "form",
+      "wrapWithPanel": false,
+      "className": "w-full -m-4",
+      "data": { //数据通过page在搜索表单及数据列表间传递
+        "name":null
+      },
+      "body": [
+        {
+          "type": "input-group",
+          "label": "",
+          "className": "w-full",
+          "body": [
+            {
+              "type": "input-text",
+              "className":"w-full",
+              "placeholder": "输入场景搜索", 
+              "name": "scene"
+            },
+            {
+              "type": "button",
+              "label": "搜索",
+              "onEvent": {
+                "click": {
+                  "actions": [
+                    {
+                      "actionType": "reload", // 重新加载SPU表格，根据新的搜索条件
+                      "componentId": "kefuservice", // 触发spu数据加载：注意需要触发service，table仅负责显示数据
+                      "args": { // ignore : 在SPU表格中将自动获取搜索条件
+                        "&": "$$"
+                      }
+                    }
+                  ]
+                }
+              },
+              "size": "md",
+              "level": "primary"
+            }
+          ]
+        },
+        {
+          "type": "service",
+          "id":"kefuservice",
+          "className":"mb-20",
+          "initFetch": true,
+          "api": {
+            "method": "get",
+            "url": BIZ_API+"/erp/wwCustomerServiceLink/list", 
+            "convertKeyToPath": false, //重要：避免自动将key中带有.的键值转换为对象
+            "replaceData": true,
+            "autoRefresh": true,
+            // "requestAdaptor": function (api) { //需要根据搜索条件动态组织搜索Query
+            //   let orgData = {...api.data}; //原有的数据，由于返回数据会装载到一起，不能直接作为搜索数据
+            //   let targetData = {
+            //     name: null, //
+            //   };
+            //   //根据搜索表单的值设置搜索条件
+            //   if(orgData.name){
+            //     targetData.name = orgData.name;
+            //   }
+            //   let payload = {
+            //     ...api,
+            //     data: targetData //使用组装后的查询条件
+            //   };
+            //   console.log("try solution search.", payload);
+            //   return payload;
+            // },
+            "adaptor": function (payload, response) {
+              return {
+                total: payload.result && payload.result.total ? payload.result.total : 0,
+                msg: payload.success ? "success" : "failure",
+                data: {
+                  records: payload.result.records, //payload.result.record,
+                },
+                status: payload.success ? 0 : 1
+              };
+            },
+            ...BIZ_CONFIG,
+            "data":{
+              pageNo: 1,
+              pageSize: 20,
+              scene: "*${scene}*" //itemName模糊匹配
+              //"&": "$$", //将搜索表单数据作为附加条目：需要在requestAdapter内进行处理
+            }
+          },
+          "body": [
+            {
+              "type": "pagination-wrapper",
+              "position": "bottom",
+              //"inputName": "rows",
+              //"outputName": "rows",
+              "perPage": 10,
+              "body": [
+                {
+                  "type": "each",
+                  "name": "records", //指定从数据域中获取用于循环的变量，即： data.records
+                  // "className": "w-full", //IMPORTANT：由于生成后多出div，手动将该div设置为flex显示
+                  "items": {
+                    "type": "card",
+                    "className": "w-full",
+                    "header": {
+                      "title": "${scene}",
+                    },
+                    "media": {
+                      "type": "image",
+                      "className": "h-32 w-32",
+                      "url": "${qrcodeUrl}",
+                      "position": "left"
+                    },
+                    "body":{
+                      "type":"tpl",
+                      "className": "text-xs",
+                      "tpl":"客服账号：${openKfid_dictText} <br/>场景描述：${description}",
+                    },
+                    // "secondary": "${extJson.from?'出发地:'+extJson.from:'' + extJson.region?' 目的地:'+extJson.region:'' + extJson.days?' 行程天数：'+extJson.days:''}",
+                    "actions": [
+                      { 
+                        "type": "button",
+                        "label": "文字链接", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try copy kefu url", context, event.data);
+                                  let url = event.data.url;
+                                  //TODO 是否采用短码？
+                                  //url = WEB_API+"/ilife-web-wx/x.html?x="+event.data.url.shortCode;
+                                  appendText( {
+                                    content: "<a href='"+ url +"' target='_blank'>立即联系</a>"
+                                  } );
+                                }
+                              },
+                              {
+                                "actionType": "toast", // 执行toast提示动作
+                                "args": { // 动作参数
+                                  "msgType": "success",
+                                  "msg": "文字链接已添加到正文"
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+                      { 
+                        "type": "button",
+                        "label": "二维码", //发送POSTMessage消息，由页面脚本直接处理，是替换原有内容
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try insert qrcode img", context, event.data);
+                                  sendImageMsg( event.data.qrcodeUrl );
+                                  // 打开抽屉
+                                  doAction({
+                                    "actionType": "toast", // 执行toast提示动作
+                                    "args": { // 动作参数
+                                      "msgType": "success",
+                                      "msg": "客服二维码已添加到正文"
+                                    }
+                                  });
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+                      { 
+                        "type": "button",
+                        "label": "复制到剪贴板", //复制包含二维码及图文链接
+                        "className": "cxd-Button cxd-Button--primary cxd-Button--size-md bg-primary",
+                        "onEvent": {
+                          "click": {
+                            "actions": [
+                              {
+                                "actionType": "custom",
+                                "script": function(context,doAction,event){
+                                  console.log("try copy poster", context, event.data);
+                                    //将内容复制到剪贴板
+                                  let html = `
+                                    <div>
+                                      <p>
+                                        <img src="__imgsrc"/>
+                                      </p>
+                                      <p>
+                                        <a href="__link" target="">立即联系</a>
+                                      </p>
+                                    </div>
+                                  `;
+
+                                  copyToClipboard("text/html", html.replace(/__imgsrc/g, event.data.qrcodeUrl).replace(/__link/g, event.data.url));
+                                  //打开抽屉
+                                  doAction({
+                                    "actionType": "toast", // 执行toast提示动作
+                                    "args": { // 动作参数
+                                      "msgType": "success",
+                                      "msg": "客服信息已复制到剪贴板，可直接粘贴"
+                                    }
+                                  });
+                                }
+                              },
+                            ]
+                          }
+                        }
+                      },
+                    ],
+                    "toolbar": [
+                      // {
+                      //   "type": "tpl",
+                      //   "tpl": "${extJson.from || extJson.region}",
+                      //   "className": "label label-warning"
+                      // },
+                      {
+                        "type": "mapping",
+                        "label": "来源类型",
+                        "name": "itemType",
+                        "map": {
+                          "solution": {
+                            "type": "tpl",
+                            "tpl": "定制方案",
+                            "className": "label label-success"
+                          },
+                          "spu": {
+                            "type": "tpl",
+                            "tpl": "产品包/资源",
+                            "className": "label label-success"
+                          },
+                          "sku": {
+                            "type": "tpl",
+                            "tpl": "产品/套餐",
+                            "className": "label label-success"
+                          },
+                          "note": {
+                            "type": "tpl",
+                            "tpl": "笔记",
+                            "className": "label label-success"
+                          },
+                          "*":{
+                            "type": "tpl",
+                            "tpl": "${itemType_dictText}",
+                            "className": "label label-success"
+                          }
+                        }
+                      },
+                      
+                    ],
+                  }
+                },
+              ]
+            }
+          ]
+        }
+      ],
+      "wrapperBody": false,
+      // "mode": "horizontal"
+    }
+    
+  ],
+  "asideResizor": false,
+  "pullRefresh": {
+    "disabled": true
+  },
+  "asideSticky": false,
+  "regions": [
+    "body"
+  ],
+  "data": {
+  }
+};
+
 //方案库查询表单：带有搜索框，默认显示全部，搜索查询全部
 export const solutionForm = {
   "type": "page",
