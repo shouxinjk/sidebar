@@ -19,6 +19,8 @@ import { useGlobSetting } from '/@/hooks/setting';
 import { JDragConfigEnum } from '/@/enums/jeecgEnum';
 import { useSso } from '/@/hooks/web/useSso';
 import { getUrlParam } from '/@/utils';
+// import { useGo, useRedo } from '/@/hooks/web/usePage';
+
 interface UserState {
   userInfo: Nullable<UserInfo>;
   token?: string;
@@ -203,12 +205,16 @@ export const useUserStore = defineStore({
                 }
             }, '*');  
             await router.replace("/c2b/toolbar/helper")
-        }else if( getUrlParam("origin") === "sidebar" || sxLoginOrigin === "sidebar" ){ //侧边栏通过state判定具体进入的tab页面: 直接在sidebar页面获取localStorage即可
-            // let tab = "";
-            // if(sxLoginState && sxLoginState.trim().length>0)
-            //   tab = "?tab="+sxLoginState;
-            console.log("sxToolbar:sidebar");
-            await router.replace("/c2b/toolbar/sidebar")
+        }else if( getUrlParam("origin") === "sidebar" || sxLoginDevice ==="sidebar" || sxLoginOrigin === "sidebar" ){ //侧边栏通过state判定具体进入的tab页面: 直接在sidebar页面获取localStorage即可
+            //注意sidebar入口下，localstorage存有corpId、agentId、tab作为页面参数
+            let sidebarParams = {
+              tab: sxLoginState,
+              corpId: localStorage.getItem("sxSidebarCorpId"),
+              agentId: localStorage.getItem("sxSidebarAgentId")
+            };
+            console.log("sxToolbar:sidebar. try nav to /c2b/toolbar/sidebar", sidebarParams);
+            // await router.replace("/c2b/toolbar/sidebar"); //sidebar界面自动检查 localStorage，得到tab参数
+            await router.replace({path: "/c2b/toolbar/sidebar",query: sidebarParams});
         }else if( getUrlParam("origin") === "editor" || sxLoginOrigin === "editor" ){ //对于浏览器插件，仅需要判断是否是对应插件即可
             console.log("sxToolbar: mp");
             //通知上层窗口修改登录状态
@@ -325,9 +331,10 @@ export const useUserStore = defineStore({
       try {
         const { goHome = true, mode, ...ThirdLoginParams } = params;
         const data = await thirdLogin(ThirdLoginParams, mode);
-        const { token } = data;
+        const { token, userInfo } = data;
         // save token
         this.setToken(token);
+        this.setTenant(userInfo.loginTenantId);
         console.log("third login done and got data. ",data);
         return this.afterLoginAction(goHome, data);
       } catch (error) {

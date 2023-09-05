@@ -39,6 +39,17 @@ export const LoginRoute: AppRouteRecordRaw = {
   },
 };
 
+//ilife: 添加sidebar到路由列表
+export const SidebarRoute: AppRouteRecordRaw = {
+  path: '/c2b/toolbar/sidebar',
+  name: 'WeworkSidebar',
+  component: () => import('/@/views/c2b/toolbar/sidebar.vue'),
+  meta: {
+    title: t('企微侧边栏'),
+  },
+};
+//end of 添加sidebar到路由列表
+
 //update-begin---author:wangshuai ---date:20220629  for：auth2登录页面路由------------
 export const Oauth2LoginRoute: AppRouteRecordRaw = {
   path: '/oauth2-app/login',
@@ -66,4 +77,5 @@ export const TokenLoginRoute: AppRouteRecordRaw = {
 };
 
 // Basic routing without permission
-export const basicRoutes = [LoginRoute, RootRoute, ...mainOutRoutes, REDIRECT_ROUTE, PAGE_NOT_FOUND_ROUTE, TokenLoginRoute, Oauth2LoginRoute];
+// ilife:添加企微侧边栏，注意放到OAuth登录之后
+export const basicRoutes = [LoginRoute, RootRoute, ...mainOutRoutes, REDIRECT_ROUTE, PAGE_NOT_FOUND_ROUTE, TokenLoginRoute, Oauth2LoginRoute, SidebarRoute];

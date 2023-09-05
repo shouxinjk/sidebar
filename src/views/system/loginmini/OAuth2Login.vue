@@ -12,7 +12,8 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { SUITE_ID } from '/@/settings/iLifeSetting';
-import { getUrlParam } from '/@/utils';
+  import { getUrlParam } from '/@/utils';
+  const userStore = useUserStore();
 
   const isOAuth = ref<boolean>(isOAuth2AppEnv());
   const env = ref<any>({ thirdApp: false, wxWork: false, wework:false, dingtalk: false });
@@ -44,12 +45,38 @@ import { getUrlParam } from '/@/utils';
     }
     //** */
     console.log("check oauth2 env", route.query, window.location.href);
-    if (/wxwork/i.test(navigator.userAgent) /* && route.query.code  && route.query.state */ ) {     // 判断当时是否是企业微信环境：服务商。
-      //当前判断不严格：受限于应用场景，与企微侧边栏配置保持一致。企微侧边栏配置中直接通过oauth链接获取code和state后进入SaaS
-      //企微侧边栏配置需要带入授权企业的corpId及agentId信息，可以据此判定是服务商应用，state结构为 corpId__agentId
-      //let stateInfo = route.query.state.toString().split("__");
-      //if(stateInfo.length>0)sessionStorage.setItem("corpId",stateInfo[0]);
-      //if(stateInfo.length>1)sessionStorage.setItem("agentId",stateInfo[1]);
+    if (/wxwork/i.test(navigator.userAgent) && route.query.device==="sidebar" && route.query.tab ) {     // 企微侧边栏专用路径：通过origin及tab参数判定
+      //企微侧边栏进入：解决发布后在history模式下无法找到/c2b/toolbar/sidebar路由情况：
+      //将/c2b/toolbar/sidebar配置到基础路由，侧边栏入口配置为进入OAuth2Login，登录完成后跳转到对应sidebar页面
+      //带有参数:corpId, agentId, device=sidebar, tab
+      //企微侧边栏配置形式：https://open.weixin.qq.com/connect/oauth2/authorize?appid=ww49d117960f664305&agentid=1000049&redirect_uri=https%3A%2F%2Fsidebar.biglistoflittlethings.com%2Fc2b%2Ftoolbar%2Fsidebar%3Ftab%3Dall%26corpId%3Dww0c1081973d35aa17%26agentId%3D1000049&response_type=code&scope=snsapi_base&state=ww0c1081973d35aa17__1000049#wechat_redirect
+      //侧边栏进入时，只要登录一次，即可直接跳转
+      let loginInfo = userStore.getLoginInfo;
+      if( loginInfo && loginInfo.isLogin ){ //表示已经登陆过，直接跳转即可
+        let sidebarParams = {
+              tab: route.query.tab,
+              corpId: route.query.corpId,
+              agentId: route.query.agentId
+            };
+            console.log("sxToolbar:sidebar. try nav to /c2b/toolbar/sidebar", sidebarParams);
+            // await router.replace("/c2b/toolbar/sidebar"); //sidebar界面自动检查 localStorage，得到tab参数
+            router.replace({path: "/c2b/toolbar/sidebar",query: sidebarParams});
+      }else{
+        //记录入口参数
+        localStorage.setItem("sxLoginDevice", "sidebar");//固定为sidebar类型
+        localStorage.setItem("sxLoginState", route.query.tab );//从参数中获取tab类型
+        localStorage.setItem("sxSidebarCorpId", route.query.corpId );//corpId
+        localStorage.setItem("sxSidebarAgentId", route.query.agentId );//agentId
+        env.value.thirdApp = true;
+        env.value.wework = true;
+      }
+    }else if (/wxwork/i.test(navigator.userAgent)  && route.query.device==="workplace"  ) {     // 企微工作台专用路径：device设置为
+      //企微后台配置入口带有参数
+      localStorage.setItem("sxLoginDevice", "workplace");//固定为workplace
+      localStorage.setItem("sxLoginState", route.query.tab);//能够通过tab参数指定目标页面：subscriptions, wework, dashbaord等
+      env.value.thirdApp = true;
+      env.value.wework = true;
+    }else if (/wxwork/i.test(navigator.userAgent)) {     // 其他企业微信登录情况
       env.value.thirdApp = true;
       env.value.wework = true;
     }/*
@@ -80,12 +107,12 @@ import { getUrlParam } from '/@/utils';
         //获取登录上下文：
         let sxLoginDevice = localStorage.getItem("sxLoginDevice");
         console.log("got login state.", sxLoginDevice);
-        if( sxLoginDevice === "pc" ){ //PC端跳转到air桌面
+        if( sxLoginDevice === "pc" || sxLoginDevice === "workplace"){ //PC端跳转到air桌面，从企微工作台进入跳转到air桌面
           let url = window.location.href.replace(/sidebar\./g,"air.");//跳转到air
           window.location.href = url; //直接跳转
         }else if( sxLoginDevice === "mobile" ){ //移动端，直接获取登录信息，并接入相应界面
           thirdLogin({ token, thirdType: route.query.thirdType });
-        }else{
+        }else{ //从sidebar等进入，则直接完成登录，在afterlogin中完成跳转
           thirdLogin({ token, thirdType: route.query.thirdType });
         }
         

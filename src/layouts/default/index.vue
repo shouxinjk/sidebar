@@ -72,13 +72,13 @@
                       window.location.href.indexOf("/sidebar")>0 ||
                       window.location.href.indexOf("/editor")>0 
                     );
-      console.log("sxToolbar",sxToolbar);
+      console.log("sxToolbar",window.location.href);
 
       return {
         getShowFullHeaderRef,
         getShowSidebar,
         prefixCls,
-        getIsMobile,
+        getIsMobile, 
         getIsMixSidebar,
         layoutClass,
         lockEvents,

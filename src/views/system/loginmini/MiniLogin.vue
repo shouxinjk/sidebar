@@ -328,6 +328,25 @@
   }
 
   /**
+   * iLife：检查登录来源。支持toolbar从浏览器侧边栏进入登录界面。登录完成后直接跳转到目标页
+   * 通过 localStorage 传递信息
+   */
+  function checkLoginOrigin(){
+    let from = document.referrer;
+    if( from && from.indexOf("/editor")>0){ //内容插件
+      console.log("oring is editor.", from);
+      localStorage.setItem("sxLoginOrigin", "editor"); //记录登录入口
+      localStorage.setItem("sxLoginState", "editor"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
+    }else if( from && from.indexOf("/helper")>0){ //OTA及电商插件
+      console.log("oring is helper.", from);
+      localStorage.setItem("sxLoginOrigin", "helper"); //记录登录入口
+      localStorage.setItem("sxLoginState", "helper"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
+    }else{ //
+      console.log("ignore login origin.", from);
+    }
+  }
+
+  /**
    * 企业微信登录
    * 支持网页端通过企业微信登录面板扫码授权完成登录
    */
@@ -343,7 +362,7 @@
     }else if( from && from.indexOf("/helper")>0){ //OTA及电商插件
       to = from; // '/c2b/toolbar/helper';
       localStorage.setItem("sxLoginOrigin", "helper"); //记录登录入口
-      localStorage.setItem("sxLoginState", "editor"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
+      localStorage.setItem("sxLoginState", "helper"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
     }else if( from && from.indexOf("/sidebar")>0){ //企微侧边栏
       to = from; // '/c2b/toolbar/sidebar'; //sidebar不会进入此逻辑，将直接进入OAuth2Login
       // localStorage.setItem("sxLoginOrigin", "sidebar"); //记录登录入口
@@ -540,6 +559,8 @@
   onMounted(() => {
     //加载验证码
     handleChangeCheckCode();
+    //iLife: 记录登录源头
+    checkLoginOrigin();
   });
 </script>
 

@@ -16,6 +16,7 @@ getRouteNames(basicRoutes);
 // app router
 export const router = createRouter({
   history: createWebHistory(import.meta.env.VITE_PUBLIC_PATH),
+  // history: createWebHashHistory(import.meta.env.VITE_PUBLIC_PATH), //ilife： resolve sidebar 404 not found error
   routes: basicRoutes as unknown as RouteRecordRaw[],
   strict: true,
   scrollBehavior: () => ({ left: 0, top: 0 }),

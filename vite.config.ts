@@ -61,7 +61,8 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       proxy: createProxy(VITE_PROXY),
     },
     build: {
-      minify: 'esbuild',
+      // minify: 'esbuild',
+      minify: 'terser', //ilife : 修改为terser
       target: 'es2015',
       cssTarget: 'chrome80',
       outDir: OUTPUT_DIR,

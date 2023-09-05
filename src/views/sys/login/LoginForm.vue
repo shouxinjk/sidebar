@@ -100,6 +100,7 @@
   import { LoginStateEnum, useLoginState, useFormRules, useFormValid } from './useLogin';
   import { useDesign } from '/@/hooks/web/useDesign';
   import { getCodeInfo } from '/@/api/sys/user';
+import { WEB_API } from '/@/settings/iLifeSetting';
   //import { onKeyStroke } from '@vueuse/core';
 
   const ACol = Col;
@@ -140,6 +141,22 @@
   const getShow = computed(() => unref(getLoginState) === LoginStateEnum.LOGIN);
 
   async function handleLogin() {
+    //记录登录地址
+    let to = WEB_API+'/dashboard/analysis'; //默认到dashboard
+    let from = document.referrer;
+    if( from && from.indexOf("/editor")>0){ //内容插件
+      to = from; // '/c2b/toolbar/editor';
+      localStorage.setItem("sxLoginOrigin", "editor"); //记录登录入口
+      localStorage.setItem("sxLoginState", "editor"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
+    }else if( from && from.indexOf("/helper")>0){ //OTA及电商插件
+      to = from; // '/c2b/toolbar/helper';
+      localStorage.setItem("sxLoginOrigin", "helper"); //记录登录入口
+      localStorage.setItem("sxLoginState", "helper"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
+    }else if( from && from.indexOf("/sidebar")>0){ //企微侧边栏
+      to = from; // '/c2b/toolbar/sidebar'; //sidebar不会进入此逻辑，将直接进入OAuth2Login
+      // localStorage.setItem("sxLoginOrigin", "sidebar"); //记录登录入口
+      // localStorage.setItem("sxLoginState", "sidebar"); //记录目标地址：浏览器插件仅一个单一地址，区分不同的浏览器插件即可
+    }
     const data = await validForm();
     if (!data) return;
     try {
